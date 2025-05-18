@@ -3,6 +3,7 @@
 #include <fftw3.h>
 #include <omp.h>
 #include <thread>
+#include <iostream>
 
 
 namespace py = pybind11;
@@ -27,7 +28,7 @@ int* gen_randmap(int q) {
 
 // pmf is the symbol probability of shape (L, q)
 // sym is the sequence of symbols to be compressed of shape (L,)
-py::bytes compress(py::array_t<double, py::array::c_style | py::array::forcecast> pmf,
+py::tuple prob_polarize(py::array_t<double, py::array::c_style | py::array::forcecast> pmf,
                    py::array_t<int, py::array::c_style | py::array::forcecast> sym) {
     // initialization
     int num_threads = std::thread::hardware_concurrency();
@@ -38,8 +39,6 @@ py::bytes compress(py::array_t<double, py::array::c_style | py::array::forcecast
     double* seqs  = new double[L * q];
     double* seq_  = new double[L * q];
     int* bols = new int[L];
-    std::memcpy(seqs, pmf.data(), sizeof(double) * L * q);
-    std::memcpy(bols, sym.data(), sizeof(int) * L);
     int* randmap = gen_randmap(q);
     // initialization of fftw3
     int N = L / 2;
@@ -62,6 +61,8 @@ py::bytes compress(py::array_t<double, py::array::c_style | py::array::forcecast
         FFTW_MEASURE
     );
     // recursive computation
+    std::memcpy(seqs, pmf.data(), sizeof(double) * L * q);
+    std::memcpy(bols, sym.data(), sizeof(int) * L);
     int group_size = L;
     while (group_size > 1) {
         // 1. pairwise-circonv
@@ -124,12 +125,23 @@ py::bytes compress(py::array_t<double, py::array::c_style | py::array::forcecast
     fftw_destroy_plan(plan_fwd);
     fftw_destroy_plan(plan_bwd);
     fftw_free(feqs);
-    delete[] seqs;
     delete[] seq_;
-    std::string bitstream(L, '\0');
-    return py::bytes(bitstream);
+    delete[] randmap;
+    auto seqs_ndarray = py::array_t<double>(
+        {L, q},
+        {sizeof(double) * q, sizeof(double)},
+        seqs,
+        py::capsule(seqs, [](void* p) { delete[] reinterpret_cast<double*>(p); })
+    );
+    auto bols_ndarray = py::array_t<int>(
+        {L},
+        {sizeof(int)},
+        bols,
+        py::capsule(bols, [](void* p) { delete[] reinterpret_cast<int*>(p); })
+    );
+    return py::make_tuple(seqs_ndarray, bols_ndarray);
 }
 
 PYBIND11_MODULE(source_core, m) {
-    m.def("compress", &compress, "Polar source compression");
+    m.def("prob_polarize", &prob_polarize, "Polarize given probability distributions and their corresponding symbols.");
 }
