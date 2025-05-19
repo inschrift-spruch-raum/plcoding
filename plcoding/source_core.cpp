@@ -4,6 +4,7 @@
 #include <omp.h>
 #include <thread>
 #include <iostream>
+#include <cmath>
 
 
 namespace py = pybind11;
@@ -103,12 +104,11 @@ py::tuple prob_polarize(py::array_t<double, py::array::c_style | py::array::forc
             double tau = 0.0;
             for (int j = 0; j < q; j++) tau += c[j];
             for (int j = 0; j < q; j++) c[j] /= tau;
-           bols[2 * i + 1] = randmap[bols[2 * i + 1]];
+            bols[2 * i + 1] = randmap[bols[2 * i + 1]];
         }
         // 3. shuffle-permutation
         int half = group_size / 2;
         int* bols_tmp = new int[group_size];
-        #pragma omp parallel for
         for (int base = 0; base < L; base += group_size) {
             for (int i = 0; i < half; i++) {
                 std::memcpy(seqs + (base + i) * q, seq_ + (base + 2 * i) * q, sizeof(double) * q);
