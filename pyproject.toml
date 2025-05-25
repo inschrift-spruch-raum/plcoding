@@ -1,4 +1,25 @@
-# pyproject.toml
 [build-system]
-requires = ["setuptools>=42", "wheel", "pybind11"]
-build-backend = "setuptools.build_meta"
+requires = ["scikit-build-core", "pybind11", "numpy"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "plcoding"
+version = "0.1.0"
+description = "Research toolkit for Arikan's polar codes."
+authors = [
+  { name = "Zichang Ren", email = "rzc1937986979@163.com" }
+]
+readme = "README.md"
+license = { text = "MIT" }
+dependencies = [
+  "numpy",
+  "torch"
+]
+
+[tool.scikit-build]
+minimum-version = "0.3"
+build-dir = "build"
+wheel.expand-macos-universal-tags = true
+
+[tool.scikit-build.cmake]
+minimum-version = "3.15"

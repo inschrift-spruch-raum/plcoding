@@ -1,54 +1,26 @@
-#include <pybind11/pybind11.h>
-#include <pybind11/numpy.h>
-#include <fftw3.h>
-#include <omp.h>
-#include <thread>
-#include <iostream>
-#include <cmath>
-
+#include "utils.h"
 
 namespace py = pybind11;
-
-
-int* gen_randmap(int q) {
-    int* randmap = new int[q];
-    for (int i = 0; i < q; i++) {
-        randmap[i] = i;
-    }
-    const uint32_t randa = 1103515245;
-    const uint32_t randc = 12345;
-    uint32_t seed = q;
-    for (int i = q - 1; i > 0; i--) {
-        seed = seed * randa + randc;
-        int j = seed % (i + 1);
-        std::swap(randmap[i], randmap[j]);
-    }
-    return randmap;
-}
-
 
 // pmf is the symbol probability of shape (L, q)
 // sym is the sequence of symbols to be compressed of shape (L,)
 py::tuple prob_polarize(py::array_t<double, py::array::c_style | py::array::forcecast> pmf,
                    py::array_t<int, py::array::c_style | py::array::forcecast> sym) {
     // initialization
-    int num_threads = std::thread::hardware_concurrency();
-    omp_set_num_threads(num_threads);
     auto pmf_buf = pmf.request();
     int L = pmf_buf.shape[0];
     int q = pmf_buf.shape[1];
     double* seqs  = new double[L * q];
     double* seq_  = new double[L * q];
     int* bols = new int[L];
-    int* randmap = gen_randmap(q);
+    int* randmap = new int[q];
+    gen_randmap(q, randmap);
     // initialization of fftw3
     int N = L / 2;
     int f = q / 2 + 1;
     fftw_complex* feqs = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * 2 * N * f);
     double scale = 1.0 / q;
     int n[] = {q};
-    fftw_init_threads();
-    fftw_plan_with_nthreads(std::thread::hardware_concurrency());
     fftw_plan plan_fwd = fftw_plan_many_dft_r2c(
         1, n, 2 * N,
         seqs, NULL, 1, q,
@@ -68,7 +40,6 @@ py::tuple prob_polarize(py::array_t<double, py::array::c_style | py::array::forc
     while (group_size > 1) {
         // 1. pairwise-circonv
         fftw_execute(plan_fwd);
-        #pragma omp parallel for
         for (int i = 0; i < N; i++) {
             fftw_complex* A = feqs + (2 * i + 0) * f;
             fftw_complex* B = feqs + (2 * i + 1) * f;
@@ -80,19 +51,16 @@ py::tuple prob_polarize(py::array_t<double, py::array::c_style | py::array::forc
             }
         }
         fftw_execute(plan_bwd);
-        #pragma omp parallel for
         for (int i = 0; i < N; i++) {
             double* out = seq_ + (2 * i) * q;
             for (int j = 0; j < q; ++j) {
                 out[j] *= scale;
             }
         }
-        #pragma omp parallel for
         for (int i = 0; i < N; i++) {
             bols[2 * i] = (bols[2 * i] + bols[2 * i + 1]) % q;
         }
         // 2. pairwise-nrmcomb
-        #pragma omp parallel for
         for (int i = 0; i < N; i++) {
             double* a = seqs + (2 * i + 0) * q;
             double* b = seqs + (2 * i + 1) * q;
@@ -142,6 +110,6 @@ py::tuple prob_polarize(py::array_t<double, py::array::c_style | py::array::forc
     return py::make_tuple(seqs_ndarray, bols_ndarray);
 }
 
-PYBIND11_MODULE(source_core, m) {
-    m.def("prob_polarize", &prob_polarize, "Polarize given probability distributions and their corresponding symbols.");
+PYBIND11_MODULE(source, m) {
+    m.def("prob_polarize", &prob_polarize, "Polarize given symbols along with their distributions.");
 }
