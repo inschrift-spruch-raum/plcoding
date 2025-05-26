@@ -3,15 +3,15 @@ root: main
 
 chapters:
   - file: 01_Introduction/00_index.ipynb
-    title: 极化码简介
+    title: 第一章：极化码简介
     sections:
       - file: 01_Introduction/01_what
-        title: 什么是极化码？
+        title: 一、什么是极化码？
       - file: 01_Introduction/02_construct
-        title: 如何构造极化码？
+        title: 二、如何构造极化码？
       - file: 01_Introduction/03_encode
-        title: 如何编码？
+        title: 三、如何编码？
       - file: 01_Introduction/04_decode
-        title: 如何译码？
+        title: 四、如何译码？
   - file: 02_Basics/00_index.ipynb
-    title: 极化码基础
+    title: 第二章：极化码基础
