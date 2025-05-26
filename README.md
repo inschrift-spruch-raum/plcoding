@@ -1,4 +1,9 @@
-# Python Library for Arikan's Polar Codes
+<table>
+  <tr>
+    <td><img src="logo.png" alt="plcoding logo" width="60"/></td>
+    <td><h1>Plcoding: A Python Library for Arikan's Polar Codes</h1></td>
+  </tr>
+</table>
 
 This is a Python library (with C++ acceleration) for advanced research on Arikan's polar codes. It provides high-performance implementations of various methods for channel coding, source coding, and theoretical investigations, with a modular design aimed at researchers and developers.
 
