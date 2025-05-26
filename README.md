@@ -5,7 +5,13 @@
   </tr>
 </table>
 
-This is a Python library (with C++ acceleration) for advanced research on Arikan's polar codes. It provides high-performance implementations of various methods for channel coding, source coding, and theoretical investigations, with a modular design aimed at researchers and developers.
+This is an under development Python library (with C++ acceleration) for advanced research on Arikan's polar codes. It provides high-performance implementations of various methods for channel coding, source coding, and theoretical investigations, with a modular design aimed at researchers and developers.
+
+## Online Tutorial
+
+👉 [Plcoding用户手册](https://renzichang.github.io/plcoding/)
+
+This project includes a Python library for researching polar codes, and is accompanied by complete teaching notes and implementation instructions.
 
 ## Features
 
