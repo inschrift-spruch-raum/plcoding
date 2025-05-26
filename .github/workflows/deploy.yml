@@ -21,9 +21,6 @@ jobs:
       - name: Install dependencies
         run: pip install jupyter-book
 
-      - name: Install plcoding library
-        run: pip install -e .
-
       - name: Build the book
         run: jupyter-book build book/
 
