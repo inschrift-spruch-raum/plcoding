@@ -15,3 +15,23 @@ chapters:
         title: 四、如何译码？
   - file: 02_Basics/00_index.ipynb
     title: 第二章：极化码基础
+    sections:
+      - file: 02_Basics/01_standardsc
+        title: 一、标准SC译码
+      - file: 02_Basics/02_polarization
+        title: 二、信道极化现象
+      - file: 02_Basics/03_polarcoding
+        title: 三、极化编码技术
+      - file: 02_Basics/04_decoding
+        title: 四、译码
+      - file: 02_Basics/05_construction
+        title: 五、构造
+  - file: 03_Advanced/00_index.ipynb
+    title: 第三章：极化码进阶
+    sections:
+      - file: 03_Advanced/01_monotone
+        title: 一、单调链极化码
+      - file: 03_Advanced/02_source
+        title: 二、信源极化码
+      - file: 03_Advanced/03_scldecoding
+        title: 三、SCL译码

@@ -11,8 +11,6 @@ This is an under development Python library (with C++ acceleration) for advanced
 
 👉 [Plcoding用户手册](https://renzichang.github.io/plcoding/)
 
-This project includes a Python library for researching polar codes, and is accompanied by complete teaching notes and implementation instructions.
-
 ## Features
 
 The library is organized into three submodules:
