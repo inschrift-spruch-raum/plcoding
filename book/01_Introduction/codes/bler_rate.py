@@ -2,7 +2,6 @@ import plcoding
 import plcoding.cpp_core.source as source
 import numpy as np
 from matplotlib import pyplot as plt
-from tqdm.notebook import trange
 
 # 接收到的先验信息
 p = 0.11
@@ -14,7 +13,7 @@ priors = np.tile(src_prob, (code_len, 1))
 h_rank = np.argsort(np.argsort(plcoding.bec_channels(level, _log=True)))
 # 仿真多次，获取每一次的无错误码率
 code_rates = np.empty((1000,))
-for i in trange(len(code_rates)):
+for i in range(len(code_rates)):
     symbols = np.random.choice(a=2, p=src_prob, size=(code_len,))
     pmf, sym = source.prob_polarize(priors, symbols)
     is_error = (np.argmax(pmf, axis=1) != sym)
