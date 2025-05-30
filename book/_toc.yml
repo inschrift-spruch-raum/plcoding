@@ -22,7 +22,7 @@ chapters:
         title: 二、极化现象
       - file: 02_Basics/03_polar_codes
         title: 三、极化码
-      - file: 02_Basics/05_construction
+      - file: 02_Basics/04_construction
         title: 四、构造算法
   - file: 03_Advanced/00_index.ipynb
     title: 第三章：极化码进阶
