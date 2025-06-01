@@ -27,9 +27,5 @@ chapters:
   - file: 03_Advanced/00_index.ipynb
     title: 第三章：极化码进阶
     sections:
-      - file: 03_Advanced/01_monotone
-        title: 一、单调链极化码
-      - file: 03_Advanced/02_source
-        title: 二、信源极化码
-      - file: 03_Advanced/03_scl_decoding
-        title: 三、SCL译码
+      - file: 03_Advanced/01_compression
+        title: 一、极化数据压缩
