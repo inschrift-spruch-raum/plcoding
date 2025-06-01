@@ -126,10 +126,10 @@ double* PolarIterator::get_edge(int level, int edge_index, bool desired_state) {
             for (int i = 0; i < edge_size; ++i) {
                 // (x1, x2) (u1) -> (u2)
                 for (int j = 0; j < this->q; ++j)
-                    u2[j] = u1[(this->q - j) % this->q];
-                fftw->circonv(x1, u2, this->tmp);
+                    this->tmp[j] = u1[(this->q - j) % this->q];
+                fftw->circonv(x1, this->tmp, u2);
                 for (int j = 0; j < this->q; ++j)
-                    u2[j] = x2[this->randmap[j]] * this->tmp[j];
+                    u2[j] *= x2[this->randmap[j]];
                 normalize(this->q, u2);
                 x1 += this->q; x2 += this->q;
                 u1 += this->q; u2 += this->q;
