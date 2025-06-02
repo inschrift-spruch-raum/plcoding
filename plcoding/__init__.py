@@ -66,3 +66,14 @@ def kron_power(mat: np.ndarray, n: int) -> np.ndarray:
     for i in range(1, n):
         result = np.kron(result, mat)
     return result
+
+# 返回给定数组中前K大的bool指示数组
+def topk_indicate(arr: np.ndarray, k: int) -> np.ndarray:
+    if k <= 0:
+        return np.zeros_like(arr, dtype=bool)
+    if k >= len(arr):
+        return np.ones_like(arr, dtype=bool)
+    idx = np.argpartition(-arr, k)[:k]
+    mask = np.zeros_like(arr, dtype=bool)
+    mask[idx] = True
+    return mask
