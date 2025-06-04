@@ -76,14 +76,16 @@ pip install .
 ## 开发进度
 
 - 已实现：
-  - C++核心功能模块，包括快速极化模块、通用的SC译码器模块
-  - plcoding模块下的部分基本函数
-  - 配套手册的基本内容已完成
+  - C++核心功能模块，包括快速极化模块、通用的SC译码器模块（2025.05.25）
+  - plcoding模块下的部分基本函数（2025.05.27）
+  - 配套手册的基本内容已完成（2025.06.03）
+  - plcoding.channel模块下的channel类和modulator类（2025.06.04）
 
 - 待实现
-  - 封装cpp_core到其他子模块
-  - 从numpy整数数组到比特流的转换
-  - 密度演化构造法
+  - plcoding.channel模块下的coder类
+  - plcoding.source模块
+  - plcoding.research模块
+  - 整数到比特流的映射函数
   - ...
 
 ### License
