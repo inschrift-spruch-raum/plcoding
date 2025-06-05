@@ -43,7 +43,7 @@ def bitrev_perm(len: int) -> NDArray[np.int64]:
 
 def bec_channels(level: int, e: float = 0.5, _log: bool = False) -> NDArray[np.float64]:
     """
-    Calculate the capacities of polarized erasure channels.
+    Calculate the Bhattacharyya parameters of polarized erasure channels.
 
     Args:
         level (int): Number of polarization level.
@@ -64,7 +64,7 @@ def bec_channels(level: int, e: float = 0.5, _log: bool = False) -> NDArray[np.f
 
 def basic_encode(input: NDArray[np.int64]) -> NDArray[np.int64]:
     """
-    Low-complexity recursive encoding of polar codes.
+    The basic low-complexity recursive encoding of polar codes.
     """
     N, W_size = len(input), len(input)
     u, x = np.copy(input), np.empty_like(input)
