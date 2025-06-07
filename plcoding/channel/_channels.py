@@ -7,7 +7,7 @@ from typing import Any
 __all__ = ["AWGN", "Erasure", "BitFlip"]
 
 
-class ChannelReal(ABC):
+class _ChannelReal(ABC):
     def __init__(self):
         pass
 
@@ -29,7 +29,7 @@ class ChannelReal(ABC):
         pass
 
 
-class AWGN(ChannelReal):
+class AWGN(_ChannelReal):
     def __init__(self, noise_pwr: float):
         """
         The additive white Gaussian noise channel.
@@ -49,7 +49,7 @@ class AWGN(ChannelReal):
         return np.exp(-(input - output) ** 2 / (2 * self.sigma ** 2))
 
 
-class Erasure(ChannelReal):
+class Erasure(_ChannelReal):
     def __init__(self, e: float):
         """
         Erasure channel, with erased symbol set to nan.
@@ -71,7 +71,7 @@ class Erasure(ChannelReal):
         return prob
 
 
-class BitFlip(ChannelReal):
+class BitFlip(_ChannelReal):
     def __init__(self, p: float):
         """
         Bit flipping channel.

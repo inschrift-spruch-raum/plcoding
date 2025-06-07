@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import numpy as np
 from plcoding import base_expansion_map
-from plcoding.channel._channels import ChannelReal
+from plcoding.channel._channels import _ChannelReal
 from numpy.typing import NDArray
 from typing import Any
 
@@ -9,7 +9,7 @@ from typing import Any
 __all__ = ["BPSK", "PAM"]
 
 
-class ModulatorReal(ABC):
+class _ModulatorReal(ABC):
     def __init__(self):
         pass
 
@@ -35,7 +35,7 @@ class ModulatorReal(ABC):
         pass
 
     @abstractmethod
-    def demodulate(self, received: NDArray[np.float64], channel: ChannelReal) -> NDArray[np.float64]:
+    def demodulate(self, received: NDArray[np.float64], channel: _ChannelReal) -> NDArray[np.float64]:
         """
         Perform soft demodulation on the disturbed constellation points.
 
@@ -52,7 +52,7 @@ class ModulatorReal(ABC):
         pass
 
 
-class Universal(ModulatorReal):
+class _Universal(_ModulatorReal):
     def __init__(self, base: int, order: int):
         """
         Universal modulator for designated constellation points.
@@ -90,7 +90,7 @@ class Universal(ModulatorReal):
         return probs / probs.sum(axis=0)
 
 
-class BPSK(Universal):
+class BPSK(_Universal):
     def __init__(self):
         """
         Binary phase shift keying modulator with (0, 1) -> (+1, -1)
@@ -99,7 +99,7 @@ class BPSK(Universal):
         self.points = np.array([1, -1])
 
 
-class PAM(Universal):
+class PAM(_Universal):
     def __init__(self, M: int):
         """
         Pulse amplitude modulator with norm(-M/2, ..., M/2) -> (0, ..., M-1), where norm() is the power normalization function.

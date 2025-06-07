@@ -10,6 +10,7 @@ def entropy_of(prob: NDArray[np.float64], base: int = 2) -> float:
     prob = prob[np.nonzero(prob)]
     return np.sum(-prob * np.log(prob)) / np.log(base)
 
+
 def h2_of(p: float) -> float:
     """
     Calculate the base-2 entropy of probability p.
@@ -17,6 +18,7 @@ def h2_of(p: float) -> float:
     if p <= 0 or p >= 1:
         return 0.0
     return entropy_of(np.array([p, 1 - p]), base=2)
+
 
 def p_of(h2: float, tol: float = 1e-10) -> NDArray[np.float64]:
     """
@@ -33,6 +35,7 @@ def p_of(h2: float, tol: float = 1e-10) -> NDArray[np.float64]:
     p = (low + high) / 2
     return np.array((p, 1 - p))
 
+
 def bitrev_perm(len: int) -> NDArray[np.int64]:
     """
     Generate the bit reversal permutation.
@@ -40,6 +43,7 @@ def bitrev_perm(len: int) -> NDArray[np.int64]:
     n = int(np.log2(len))
     assert 2 ** n == len, "len must be a power of 2"
     return np.array([int(f"{i:0{n}b}"[::-1], 2) for i in range(len)])
+
 
 def bec_channels(level: int, e: float = 0.5, _log: bool = False) -> NDArray[np.float64]:
     """
@@ -62,6 +66,7 @@ def bec_channels(level: int, e: float = 0.5, _log: bool = False) -> NDArray[np.f
     z_arr = np.array(z_list)
     return z_arr if _log else np.exp(z_arr)
 
+
 def basic_encode(input: NDArray[np.int64]) -> NDArray[np.int64]:
     """
     The basic low-complexity recursive encoding of polar codes.
@@ -79,11 +84,13 @@ def basic_encode(input: NDArray[np.int64]) -> NDArray[np.int64]:
         W_size = int(W_size / 2)
     return u
 
+
 def kron_power(mat: NDArray[np.int64], n: int) -> NDArray[np.int64]:
     result = mat
-    for i in range(1, n):
+    for _ in range(1, n):
         result = np.kron(result, mat)
     return result
+
 
 def topk_indicate(arr: NDArray[Any], k: int) -> NDArray[np.bool_]:
     """
@@ -97,6 +104,7 @@ def topk_indicate(arr: NDArray[Any], k: int) -> NDArray[np.bool_]:
     mask = np.zeros_like(arr, dtype=bool)
     mask[idx] = True
     return mask
+
 
 def base_expansion_map(q: int, n: int) -> NDArray[np.int64]:
     """
@@ -114,4 +122,3 @@ def base_expansion_map(q: int, n: int) -> NDArray[np.int64]:
     for i in range(n):
         divisor = q ** i
         map_matrix[i] = (indices // divisor) % q
-    return map_matrix
