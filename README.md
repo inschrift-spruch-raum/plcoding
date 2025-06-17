@@ -77,7 +77,7 @@ Plcoding库配套一册基于Jupyter Notebook的在线免费文档，其中给�
 pip install .
 ```
 
-**从PyPI**：由于正在开发完成，所以暂未上传
+**从PyPI**：待基本功能开发完毕后将实现
 
 ```bash
 pip install plcoding

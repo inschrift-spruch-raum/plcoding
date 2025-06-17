@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 from numpy.typing import NDArray
-from plcoding.cpp_core.iterator import PolarIterator
+from plcoding.cpp_core.classics import PolarIterator
 
 
 __all__ = ["encode_int16_cdf", "decode_int16_cdf", "encode_pmf", "decode_pmf"]

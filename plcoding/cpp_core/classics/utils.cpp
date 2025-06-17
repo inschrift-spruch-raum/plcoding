@@ -1,18 +1,8 @@
-#pragma once
-#include <pybind11/pybind11.h>
-#include <pybind11/numpy.h>
-#include <fftw3.h>
-#include <cmath>
-#include <iostream>
+#include "utils.h"
 
-typedef unsigned int uint32_t;
-
-// random seed-pair
-const uint32_t randa = 1103515245;
-const uint32_t randc = 12345;
 
 // generate a random permutation for Z_q
-inline void gen_randmap(int q, int* randmap) {
+void gen_randmap(int q, int* randmap) {
     for (int i = 0; i < q; ++i)
         randmap[i] = i;
     uint32_t seed = q;
@@ -27,13 +17,13 @@ inline void gen_randmap(int q, int* randmap) {
 }
 
 // get the inverse permutation
-inline void get_inverse(int q, int* randmap, int* lookups) {
+void get_inverse(int q, int* randmap, int* lookups) {
     for (int i = 0; i < q; ++i)
         lookups[randmap[i]] = i;
 }
 
 // normalize the given vector
-inline void normalize(int q, double* vector) {
+void normalize(int q, double* vector) {
     double tau = 0.0;
     for (int i = 0; i < q; ++i)
         tau += vector[i];
@@ -41,21 +31,8 @@ inline void normalize(int q, double* vector) {
         vector[i] /= tau;
 }
 
-// fftw3 wrapper
-class FFTW3Wrapper {
-private:
-    int q;
-    double *a_time, *b_time, *c_time;
-    fftw_complex *a_freq, *b_freq, *c_freq;
-    fftw_plan a_plan, b_plan, c_plan;
-public:
-    FFTW3Wrapper(int seq_len);
-    ~FFTW3Wrapper();
-    void circonv(const double* in1, const double* in2, double* out);
-};
-
 // initialization with sequence length
-inline FFTW3Wrapper::FFTW3Wrapper(int seq_len) {
+FFTW3Wrapper::FFTW3Wrapper(int seq_len) {
     this->q = seq_len;
     // time domain sequences
     a_time = fftw_alloc_real(seq_len);
@@ -71,7 +48,7 @@ inline FFTW3Wrapper::FFTW3Wrapper(int seq_len) {
     c_plan  = fftw_plan_dft_c2r_1d(seq_len, c_freq, c_time, FFTW_MEASURE);
 }
 
-inline FFTW3Wrapper::~FFTW3Wrapper() {
+FFTW3Wrapper::~FFTW3Wrapper() {
     fftw_destroy_plan(a_plan);
     fftw_destroy_plan(b_plan);
     fftw_destroy_plan(c_plan);
@@ -83,8 +60,8 @@ inline FFTW3Wrapper::~FFTW3Wrapper() {
     fftw_free(c_freq);
 }
 
-// circular convolution
-inline void FFTW3Wrapper::circonv(const double* in1, const double* in2, double* out) {
+// fast circular convolution
+void FFTW3Wrapper::circonv(const double* in1, const double* in2, double* out) {
     std::copy(in1, in1 + this->q, this->a_time);
     std::copy(in2, in2 + this->q, this->b_time);
     fftw_execute(a_plan);

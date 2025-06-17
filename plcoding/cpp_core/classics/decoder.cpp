@@ -1,6 +1,5 @@
 #include "utils.h"
 
-namespace py = pybind11;
 
 class PolarIterator {
 private:
@@ -203,7 +202,7 @@ double* PolarIterator::get_edge(int level, int edge_index, bool desired_state) {
     return edge_now;
 }
 
-PYBIND11_MODULE(iterator, m) {
+PYBIND11_MODULE(classics, m) {
     py::class_<PolarIterator>(m, "PolarIterator")
         .def(py::init<int, int>(), py::arg("code_len"), py::arg("prob_base"))
         .def("set_priors", &PolarIterator::set_priors)

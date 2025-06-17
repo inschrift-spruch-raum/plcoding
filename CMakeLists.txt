@@ -9,16 +9,25 @@ find_package(Python3 REQUIRED COMPONENTS NumPy)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# source module
-pybind11_add_module(source
-    plcoding/cpp_core/source.cpp
+# functions module
+pybind11_add_module(functions
+    plcoding/cpp_core/functions.cpp
 )
-target_link_libraries(source PRIVATE Python3::NumPy fftw3)
-install(TARGETS source DESTINATION plcoding/cpp_core)
+target_link_libraries(functions PRIVATE Python3::NumPy fftw3)
+install(TARGETS functions DESTINATION plcoding/cpp_core)
 
-# iterator module
-pybind11_add_module(iterator
-    plcoding/cpp_core/iterator.cpp
+# classics module
+pybind11_add_module(classics
+    plcoding/cpp_core/classics/decoder.cpp
+    plcoding/cpp_core/classics/utils.cpp
 )
-target_link_libraries(iterator PRIVATE Python3::NumPy fftw3)
-install(TARGETS iterator DESTINATION plcoding/cpp_core)
+target_link_libraries(classics PRIVATE Python3::NumPy fftw3)
+install(TARGETS classics DESTINATION plcoding/cpp_core)
+
+# monotone module
+pybind11_add_module(monotone
+    plcoding/cpp_core/monotone/decoders.cpp
+    plcoding/cpp_core/monotone/utils.cpp
+)
+target_link_libraries(monotone PRIVATE Python3::NumPy fftw3)
+install(TARGETS monotone DESTINATION plcoding/cpp_core)

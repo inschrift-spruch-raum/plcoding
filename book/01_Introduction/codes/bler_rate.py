@@ -1,5 +1,5 @@
 import plcoding
-import plcoding.cpp_core.source as source
+from plcoding.cpp_core.functions import prob_polarize
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -15,7 +15,7 @@ h_rank = np.argsort(np.argsort(plcoding.bec_channels(level, _log=True)))
 code_rates = np.empty((1000,))
 for i in range(len(code_rates)):
     symbols = np.random.choice(a=2, p=src_prob, size=(code_len,))
-    pmf, sym = source.prob_polarize(priors, symbols)
+    pmf, sym = prob_polarize(priors, symbols)
     is_error = (np.argmax(pmf, axis=1) != sym)
     code_rates[i] = (np.min(h_rank[is_error]) + 1) / code_len
 # 绘制BLER-Rate曲线

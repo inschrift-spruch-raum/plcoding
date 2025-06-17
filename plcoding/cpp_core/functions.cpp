@@ -1,11 +1,34 @@
-#include "utils.h"
+#include <pybind11/pybind11.h>
+#include <pybind11/numpy.h>
+#include <fftw3.h>
+
 
 namespace py = pybind11;
 
-// pmf is the symbol probability of shape (L, q)
-// sym is the sequence of symbols to be compressed of shape (L,)
-py::tuple prob_polarize(py::array_t<double, py::array::c_style | py::array::forcecast> pmf,
-                   py::array_t<int, py::array::c_style | py::array::forcecast> sym) {
+
+// random seed-pair
+const unsigned int randa = 1103515245;
+const unsigned int randc = 12345;
+
+
+// generate a random permutation for Z_q
+inline void gen_randmap(int q, int* randmap) {
+    for (int i = 0; i < q; ++i)
+        randmap[i] = i;
+    unsigned int seed = q;
+    int temp;
+    for (int i = q - 1; i > 0; i--) {
+        seed = seed * randa + randc;
+        int j = seed % (i + 1);
+        temp = randmap[i];
+        randmap[i] =randmap[j];
+        randmap[j] = temp;
+    }
+}
+
+
+// fast probability distribution polarization
+py::tuple prob_polarize(py::array_t<double, py::array::c_style | py::array::forcecast> pmf, py::array_t<int, py::array::c_style | py::array::forcecast> sym) {
     // initialization
     auto pmf_buf = pmf.request();
     int L = pmf_buf.shape[0];
@@ -110,6 +133,6 @@ py::tuple prob_polarize(py::array_t<double, py::array::c_style | py::array::forc
     return py::make_tuple(seqs_ndarray, bols_ndarray);
 }
 
-PYBIND11_MODULE(source, m) {
+PYBIND11_MODULE(functions, m) {
     m.def("prob_polarize", &prob_polarize, "Polarize given symbols along with their distributions.");
 }
