@@ -3,7 +3,9 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/**",
+                "/home/pku2321/anaconda3/lib/python3.11/site-packages/pybind11/include",
+                "/home/pku2321/anaconda3/envs/rzc_d2l/include/python3.11"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",

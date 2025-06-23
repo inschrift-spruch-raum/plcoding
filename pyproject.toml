@@ -5,15 +5,14 @@ build-backend = "scikit_build_core.build"
 [project]
 name = "plcoding"
 version = "0.1.0"
-description = "Research toolkit for Arikan's polar codes."
+description = "An advanced research toolkit for Arikan's polar codes."
 authors = [
   { name = "Zichang Ren", email = "rzc1937986979@163.com" }
 ]
 readme = "README.md"
 license = { text = "MIT" }
 dependencies = [
-  "numpy",
-  "torch"
+  "numpy"
 ]
 
 [tool.scikit-build]
