@@ -1,7 +1,7 @@
 #include "utils.h"
 
 
-JointProb::JointProb(const int *shape, int ndim) {
+NDimShape::NDimShape(const int *shape, int ndim) {
     this->shape = new int[ndim];
     this->ndim = ndim;
     this->size = 1;
@@ -9,16 +9,15 @@ JointProb::JointProb(const int *shape, int ndim) {
         this->shape[i] = shape[i];
         this->size *= shape[i];
     }
-    this->multi_index = new int*[this->size];
+    this->nd_indices = new int*[this->size];
     for (int i = 0; i < this->size; ++i) {
-        this->multi_index[i] = new int[ndim];
+        this->nd_indices[i] = new int[ndim];
         int rem = i;
         for (int j = ndim - 1; j >= 0; --j) {
-            this->multi_index[i][j] = rem % this->shape[j];
+            this->nd_indices[i][j] = rem % this->shape[j];
             rem /= this->shape[j];
         }
     }
-    this->temp_index = new int[ndim];
     // fast operation
     this->array1 = fftw_alloc_real(this->size);
     this->array2 = fftw_alloc_real(this->size);
@@ -31,13 +30,11 @@ JointProb::JointProb(const int *shape, int ndim) {
     this->plan_ = fftw_plan_dft_c2r(ndim, shape, farray_, array_, FFTW_MEASURE);
 }
 
-JointProb::~JointProb() {
+NDimShape::~NDimShape() {
     delete[] this->shape;
-    for (int i = 0; i < this->size; ++i) {
-        delete[] this->multi_index[i];
-    }
-    delete[] this->multi_index;
-    delete[] this->temp_index;
+    for (int i = 0; i < this->size; ++i)
+        delete[] this->nd_indices[i];
+    delete[] this->nd_indices;
     fftw_destroy_plan(this->plan1);
     fftw_destroy_plan(this->plan2);
     fftw_destroy_plan(this->plan_);
@@ -49,37 +46,20 @@ JointProb::~JointProb() {
     fftw_free(this->farray_);
 }
 
-int JointProb::to_linear(const int *index) {
+int NDimShape::to_linear(const int *index) {
     int k = 0;
-    for (int i = 0; i < this->ndim; ++i) {
+    for (int i = 0; i < this->ndim; ++i)
         k = k * this->shape[i] + index[i];
-    }
     return k;
 }
 
-void JointProb::datacpy(const double *from, double *to) {
-    for (int i = 0; i < this->size; ++i) {
-        to[i] = from[i];
-    }
-}
-
-void JointProb::inverse(const double *from, double *to) {
-    for (int i = 0; i < this->size; ++i) {
-        for (int j = 0; j < this->ndim; ++j) {
-            this->temp_index[j] = (this->shape[j] - this->multi_index[i][j]) % this->shape[j];
-        }
-        to[i] = from[this->to_linear(this->temp_index)];
-    }
-}
-
-void JointProb::nrmcomb(const double *from1, const double *from2, double *to) {
-    for (int i = 0; i < this->size; ++i) {
+void NDimShape::nrmcomb(const double *from1, const double *from2, double *to) {
+    for (int i = 0; i < this->size; ++i)
         to[i] = from1[i] * from2[i];
-    }
     this->normalize(to);
 }
 
-void JointProb::circonv(const double *from1, const double *from2, double *to) {
+void NDimShape::circonv(const double *from1, const double *from2, double *to) {
     for (int i = 0; i < this->size; ++i) {
         this->array1[i] = from1[i];
         this->array2[i] = from2[i];
@@ -94,295 +74,410 @@ void JointProb::circonv(const double *from1, const double *from2, double *to) {
         this->farray_[i][1] = a * d + b * c;
     }
     fftw_execute(this->plan_);
-    for (int i = 0; i < this->size; ++i) {
+    for (int i = 0; i < this->size; ++i)
         to[i] = this->array_[i] / this->size;
-    }
 }
 
-void JointProb::normalize(double *target) {
+void NDimShape::normalize(double *target) {
     double tau = 0.0;
-    for (int i = 0; i < this->size; ++i) {
+    for (int i = 0; i < this->size; ++i)
         tau += target[i];
-    }
-    for (int i = 0; i < this->size; ++i) {
+    for (int i = 0; i < this->size; ++i)
         target[i] /= tau;
-    }
 }
 
-Edge::Edge(int size, JointProb *jprob) {
-    if (size < 1) {
-        throw std::runtime_error("Edge size must be >= 1!");
-    }
-    this->size = size;
-    this->jprob = jprob;
-    this->data = new double[jprob->get_size() * size];
-}
-
-Edge::~Edge() {
-    delete[] this->data;
-}
-
-void Edge::copy_ptrs(const Edge *from) {
-    this->root = from->root;
-    this->lbro = from->lbro;
-    this->rbro = from->rbro;
-    this->lchl = from->lchl;
-    this->rchl = from->rchl;
-}
-
-void Edge::copy_data(const Edge *from) {
-    this->copy_data(from->data);
-}
-
-void Edge::copy_data(const double *pt) {
-    int data_size = this->size * this->jprob->get_size();
-    for (int i = 0; i < data_size; ++i) {
-        this->data[i] = pt[i];
-    }
-}
-
-void Edge::set_uniform() {
-    int data_size = this->size * this->jprob->get_size();
-    double p_value = 1.0 / this->jprob->get_size();
-    for (int i = 0; i < data_size; ++i) {
-        this->data[i] = p_value;
-    }
-}
-
-// this method provides an elegant way to obtain the corresponding pointer attribute
-Edge *&Edge::get_ptr(stype type) {
-    if (type == left_to_right) {
-        return this->rbro;
-    } else if (type == right_to_left) {
-        return this->lbro;
-    } else if (type == parent_to_left) {
-        return this->lchl;
-    } else if (type == parent_to_right) {
-        return this->rchl;
-    } else {
-        return this->root;
-    }
-}
-
-double Edge::partially_judge_from(const Edge *from, int var, int value) {
-    if (this->size != 1) {
-        throw std::runtime_error("Invalid partially judged edge!");
-    }
-    int jpsize = this->jprob->get_size();
-    // transfer data and set zero at corresponding indices
-    this->copy_data(from->data);
-    for (int i = 0; i < jpsize; ++i) {
-        if (this->jprob->from_linear(i)[var] != value) {
-            this->data[i] = 0.0;
-        }
-    }
-    this->jprob->normalize(this->data);
-    // calculate the marginal likelihood
-    double likelihood = 0.0;
-    for (int i = 0; i < jpsize; ++i) {
-        if (this->jprob->from_linear(i)[var] == value) {
-            likelihood += this->data[i];
-        }
-    }
-    // set the distribution to be partially uniform
-    for (int i = 0; i < jpsize; ++i) {
-        if (this->data[i] != 0.0) {
-            this->data[i] = 1;
-        }
-    }
-    return std::log(likelihood);
-}
-
-void Edge::check_params(int var, int value) {
-    if (var < 0 || var >= this->jprob->get_ndim()) {
-        throw std::runtime_error("Invalid variable!");
-    }
-    if (value < 0 || value >= this->jprob->get_shape(var)) {
-        throw std::runtime_error("Invalid value!");
-    }
-}
-
-DecodingWalker::DecodingWalker(int code_len, JointProb *jprob) {
-    this->code_lvl = std::ceil(std::log2(code_len));
-    this->code_len = (1 << this->code_lvl);
-    this->jprob = jprob;
-    // note that the decoding tree has an additional root edge
-    int tree_size = 2 * this->code_len - 1;
-    this->edges = new Edge*[tree_size];
-    for (int i = 0; i < tree_size; ++i) {
-        int edge_size = this->edge_size_at(this->depth_of(i));
-        this->edges[i] = new Edge(edge_size, jprob);
-    }
-    // allocate memories for the lazy update operation
-    this->buffers = new Edge*[this->code_lvl + 1];
-    for (int i = 0; i <= this->code_lvl; ++i) {
-        int edge_size = this->edge_size_at(i);
-        this->buffers[i] = new Edge(edge_size, jprob);
-    }
-    // allocate memories for update operations
-    this->tmp_data = new double[jprob->get_size()];
+JointProb::JointProb(NDimShape *shape) {
+    this->shape = shape;
+    this->data = new double[shape->get_size()];
+    this->values = new int[shape->get_ndim()];
     this->reset();
 }
 
-DecodingWalker::~DecodingWalker() {
-    // free the decoding tree
-    int tree_size = 2 * this->code_len - 1;
-    for (int i = 0; i < tree_size; ++i) {
-        delete this->edges[i];
-    }
-    delete[] this->edges;
-    // free buffers
-    for (int i = 0; i <= this->code_lvl; ++i) {
-        delete this->buffers[i];
-    }
-    delete[] this->buffers;
+JointProb::~JointProb() {
+    delete[] this->data;
+    delete[] this->values;
 }
 
-void DecodingWalker::reset() {
-    this->branch_now = 0;
-    // reset the decoding tree
-    int tree_size = 2 * this->code_len - 1;
-    // reset the probabilities to uniform
-    for (int i = 1; i < tree_size; ++i) {
-        this->edges[i]->set_uniform();
+void JointProb::reset() {
+    for (int i = 0; i < this->shape->get_ndim(); ++i)
+        this->values[i] = -1;
+    this->set_uniform();
+}
+
+void JointProb::calc_marginal(int var, double *output) {
+    for (int i = 0; i < this->shape->get_shape()[var]; ++i)
+        output[i] = 0.0;
+    for (int i = 0; i < this->shape->get_size(); ++i) {
+        int j = this->shape->from_linear(i)[var];
+        output[j] += this->data[i];
     }
-    for (int i = 0; i < tree_size; ++i) {
-        // set parents for edges
-        if (this->depth_of(i) >= 1) {
-            this->edges[i]->root = this->edges[(i - 1) / 2];
-            if (i % 2 == 1) {
-                this->edges[i]->rbro = this->edges[i + 1];
-            } else {
-                this->edges[i]->lbro = this->edges[i - 1];
+}
+
+void JointProb::set_uniform() {
+    int size = this->shape->get_size();
+    for (int i = 0; i < size; ++i)
+        this->data[i] = 1.0 / size;
+}
+
+void JointProb::decision_upon(int var, int value) {
+    this->values[var] = value;
+    for (int i = 0; i < this->shape->get_size(); ++i) {
+        this->data[i] = 1.0;
+        for (int j = 0; j < this->shape->get_ndim(); ++j) {
+            if (this->shape->from_linear(i)[j] != this->values[j] && this->values[j] != -1) {
+                this->data[i] = 0.0;
+                break;
             }
         }
-        // set children for edges
-        if (this->depth_of(i) < this->code_lvl) {
-            this->edges[i]->lchl = this->edges[i * 2 + 1];
-            this->edges[i]->rchl = this->edges[i * 2 + 2];
+    }
+    this->shape->normalize(this->data);
+}
+
+void JointProb::set_prior(const double *prior) {
+    for (int i = 0; i < this->shape->get_size(); ++i)
+        this->data[i] = prior[i];
+}
+
+void JointProb::sum(JointProb *input1, JointProb *input2) {
+    for (int i = 0; i < this->shape->get_ndim(); ++i) {
+        int value1 = input1->values[i];
+        int value2 = input2->values[i];
+        if (value1 != -1 && value2 != -1)
+            this->values[i] = (value1 + value2) % this->shape->get_shape()[i];
+        else
+            this->values[i] = -1;
+    }
+    shape->circonv(input1->data, input2->data, this->data);
+}
+
+void JointProb::copy_from(JointProb *input) {
+    for (int i = 0; i < this->shape->get_ndim(); ++i)
+        this->values[i] = input->values[i];
+    for (int i = 0; i < this->shape->get_size(); ++i)
+        this->data[i] = input->data[i];
+}
+
+void JointProb::combine(JointProb *input1, JointProb *input2) {
+    for (int i = 0; i < this->shape->get_ndim(); ++i) {
+        int value1 = input1->values[i];
+        int value2 = input2->values[i];
+        if (value1 != value2 && value1 != -1 && value2 != -1)
+            throw std::runtime_error("Invalid probs for JointProb::combine()!");
+        this->values[i] = (value2 == -1) ? value1 : value2;
+    }
+    this->shape->nrmcomb(input1->data, input2->data, this->data);
+}
+
+void JointProb::reverse(JointProb *input) {
+    auto shape = this->shape;
+    // let's borrow the allocated values' space
+    for (int i = 0; i < shape->get_size(); ++i) {
+        const int *nd_index = shape->from_linear(i);
+        for (int j = 0; j < shape->get_ndim(); ++j) {
+            int base = shape->get_shape()[j];
+            this->values[j] = (base - nd_index[j]) % base;
+        }
+        int k = shape->to_linear(this->values);
+        this->data[k] = input->data[i];
+    }
+    // calculate the reversed values
+    for (int i = 0; i < shape->get_ndim(); ++i) {
+        int value = input->values[i];
+        this->values[i] = value;
+        if (value != -1) {
+            int base = shape->get_shape()[i];
+            this->values[i] = (base - value) % base;
         }
     }
 }
 
-void DecodingWalker::set_priors(const double *priors) {
-    this->edges[0]->copy_data(priors);
+void JointProb::subtract(JointProb *input1, JointProb *input2) {
+    this->reverse(input2);
+    this->sum(input1, this);
 }
 
-// maintain an unchanged tree view
-void DecodingWalker::lazy_step(int branch_to) {
-    Edge *edge_now = this->edges[this->branch_now];
-    Edge *buffer = this->buffers[this->depth_of(branch_to)];
-    stype type1 = this->step_type(this->branch_now, branch_to);
-    stype type2 = this->step_type(branch_to, this->branch_now);
-    Edge *edge_old = edge_now->get_ptr(type1);
-    this->calc_edge(edge_now, buffer, type1);
-    buffer->copy_ptrs(edge_old);
-    buffer->get_ptr(type2) = edge_now;
-    // if the next edge is in the bottom layer, nrmcomb the result with previous data
-    if (this->depth_of(branch_to) == this->code_lvl) {
-        this->jprob->nrmcomb(edge_old->data, buffer->data, buffer->data);
+void JointProb::print(bool _not_last) {
+    int size = this->shape->get_size();
+    int ndim = this->shape->get_ndim();
+    std::cout << "(";
+    for (int i = 0; i < size - 1; ++i)
+        std::cout << std::fixed << std::setprecision(2) << this->data[i] << ", ";
+    std::cout << std::fixed << std::setprecision(2) << this->data[size - 1] << ")<";
+    for (int i = 0; i < ndim - 1; ++i)
+        std::cout << this->values[i] << ", ";
+    std::cout << this->values[ndim - 1] << ">";
+    if (_not_last) std::cout << ", ";
+}
+
+Edge::Edge(int size, NDimShape *shape) {
+    this->size = size;
+    this->shape = shape;
+    this->probs = new JointProb*[size];
+    for (int i = 0; i < size; ++i)
+        this->probs[i] = new JointProb(shape);
+    this->reset();
+}
+
+Edge::~Edge() {
+    for (int i = 0; i < size; ++i)
+        delete this->probs[i];
+    delete[] this->probs;
+}
+
+void Edge::reset() {
+    for (int i = 0; i < this->size; ++i)
+        this->probs[i]->reset();
+    this->node_from = nullptr;
+}
+
+void Edge::set_probs(const double *probs) {
+    int stride = this->shape->get_size();
+    for (int i = 0; i < this->size; ++i)
+        this->probs[i]->set_prior(probs + i * stride);
+}
+
+void Edge::copy_from(const Edge *input) {
+    for (int i = 0; i < this->size; ++i)
+        this->probs[i]->copy_from(input->probs[i]);
+    this->node_from = input->node_from;
+}
+
+void Edge::combine_with(const Edge *input) {
+    for (int i = 0; i < this->size; ++i)
+        this->probs[i]->combine(this->probs[i], input->probs[i]);
+}
+
+void Edge::print(bool _not_last) {
+    std::cout << "{";
+    for (int j = 0; j < this->size - 1; ++j)
+        this->probs[j]->print();
+    this->probs[this->size - 1]->print(false);
+    std::cout << "}";
+    if (_not_last) std::cout << ", ";
+}
+
+void Edge::update_root(Edge *root, Edge *lchl, Edge *rchl) {
+    int size = lchl->size;
+    for (int i = 0; i < size; ++i) {
+        root->probs[i]->sum(lchl->probs[i], rchl->probs[i]);
+        root->probs[i + size]->copy_from(rchl->probs[i]);
     }
-    this->branch_now = branch_to;
 }
 
-// update the buffer data to the real edge
-void DecodingWalker::flush_buffer() {
-    // transfer data and pointers
-    Edge *buffer = this->buffers[this->depth_of(this->branch_now)];
-    Edge *edge_now = this->edges[this->branch_now];
-    edge_now->copy_data(buffer);
-    edge_now->copy_ptrs(buffer);
+void Edge::update_lchl(Edge *root, Edge *lchl, Edge *rchl) {
+    int size = lchl->size;
+    JointProb temp = JointProb(lchl->shape);
+    for (int i = 0; i < size; ++i) {
+        temp.combine(rchl->probs[i], root->probs[i + size]);
+        lchl->probs[i]->subtract(root->probs[i], &temp);
+    }
 }
 
-// calculate the data part of <edge_to> based on the given <edge_from> and their step <type>
-void DecodingWalker::calc_edge(Edge *edge_from, Edge *edge_to, stype type) {
-    if (type == left_to_parent) {
-        this->calc_root(edge_from, edge_from->rbro, edge_to);
-    } else if (type == right_to_parent) {
-        this->calc_root(edge_from->lbro, edge_from, edge_to);
-    } else if (type == parent_to_left) {
-        this->calc_lchl(edge_to, edge_from->rchl, edge_from);
-    } else if (type == parent_to_right) {
-        this->calc_rchl(edge_from->lchl, edge_to, edge_from);
-    } else if (type == left_to_right) {
-        this->calc_rchl(edge_from, edge_to, edge_from->root);
-    } else if (type == right_to_left) {
-        this->calc_lchl(edge_to, edge_from, edge_from->root);
+void Edge::update_rchl(Edge *root, Edge *lchl, Edge *rchl) {
+    int size = lchl->size;
+    JointProb temp = JointProb(lchl->shape);
+    for (int i = 0; i < size; ++i) {
+        temp.subtract(root->probs[i], lchl->probs[i]);
+        rchl->probs[i]->combine(&temp, root->probs[i + size]);
+    }
+}
+
+Node::Node(int branch) {
+    this->branch = branch;
+    this->reset();
+}
+
+void Node::reset() {
+    this->edge_root = nullptr;
+    this->edge_lchl = nullptr;
+    this->edge_rchl = nullptr;
+}
+
+void Node::copy_ptrs(const Node *input) {
+    this->edge_root = input->edge_root;
+    this->edge_lchl = input->edge_lchl;
+    this->edge_rchl = input->edge_rchl;
+}
+
+Edge *Node::get_ptr(int type) {
+    if (type == 0) {
+        return this->edge_root;
+    } else if (type == 1) {
+        return this->edge_lchl;
+    } else if (type == 2) {
+        return this->edge_rchl;
     } else {
-        throw std::runtime_error("Invalid parameters for calc_edge()!");
+        throw std::runtime_error("Invalid type for Node::get_ptr()!");
     }
 }
 
-void DecodingWalker::calc_root(const Edge *lchl, const Edge *rchl, Edge *root) {
-    int pnum = lchl->size;
-    int plen = this->jprob->get_size();
-    double *x1 = root->data, *x2 = x1 + pnum * plen, *u1 = lchl->data, *u2 = rchl->data;
-    for (int i = 0; i < pnum; ++i) {
-        this->jprob->circonv(u1, u2, x1);
-        this->jprob->datacpy(u2, x2);
-        x1 += plen; x2 += plen; u1 += plen; u2 += plen;
-    }
-}
-
-void DecodingWalker::calc_lchl(Edge *lchl, const Edge *rchl, const Edge *root) {
-    int pnum = lchl->size;
-    int plen = this->jprob->get_size();
-    double *x1 = root->data, *x2 = x1 + pnum * plen, *u1 = lchl->data, *u2 = rchl->data;
-    for (int i = 0; i < pnum; ++i) {
-        this->jprob->nrmcomb(u2, x2, u1);
-        this->jprob->inverse(u1, this->tmp_data);
-        this->jprob->circonv(x1, this->tmp_data, u1);
-        x1 += plen; x2 += plen; u1 += plen; u2 += plen;
-    }
-}
-
-void DecodingWalker::calc_rchl(const Edge *lchl, Edge *rchl, const Edge *root) {
-    int pnum = lchl->size;
-    int plen = this->jprob->get_size();
-    double *x1 = root->data, *x2 = x1 + pnum * plen, *u1 = lchl->data, *u2 = rchl->data;
-    for (int i = 0; i < pnum; ++i) {
-        this->jprob->inverse(u1, u2);
-        this->jprob->circonv(x1, u2, this->tmp_data);
-        this->jprob->nrmcomb(x2, this->tmp_data, u2);
-        x1 += plen; x2 += plen; u1 += plen; u2 += plen;
-    }
-}
-
-// get the step type between two branches
-stype DecodingWalker::step_type(int branch_from, int branch_to) {
-    int depth_from = this->depth_of(branch_from);
-    int depth_to = this->depth_of(branch_to);
-    if (((branch_from - 1) / 2 == branch_to) && (depth_from == depth_to + 1)) {
-        // case 1: from children to parent
-        return (branch_from % 2 == 1) ? left_to_parent : right_to_parent;
-    } else if ((branch_from == (branch_to - 1) / 2) && (depth_from == depth_to - 1)) {
-        // case 2: from parent to children
-        return (branch_to % 2 == 1) ? parent_to_left : parent_to_right;
-    } else if ((depth_from == depth_to) && (branch_from == branch_to - 1)) {
-        // case 3.1: from brother to brother
-        return left_to_right;
-    } else if ((depth_from == depth_to) && (branch_from - 1 == branch_to)) {
-        // case 3.2: from brother to brother
-        return right_to_left;
+void Node::set_ptr(int type, Edge *edge) {
+    if (type == 0) {
+        this->edge_root = edge;
+    } else if (type == 1) {
+        this->edge_lchl = edge;
+    } else if (type == 2) {
+        this->edge_rchl = edge;
     } else {
-        throw std::runtime_error("Invalid stype, not adjacent!");
+        throw std::runtime_error("Invalid type for Node::set_ptr()!");
     }
 }
 
-void DecodingWalker::check_params(int var, int index, int value) {
-    this->edges[0]->check_params(var, value);
-    if (index < 0 || index >= this->code_len) {
-        throw std::runtime_error("Invalid index!");
+void Node::update_edge(int type) {
+    if (type == 0) {
+        Edge::update_root(this->edge_root, this->edge_lchl, this->edge_rchl);
+    } else if (type == 1) {
+        Edge::update_lchl(this->edge_root, this->edge_lchl, this->edge_rchl);
+    } else if (type == 2) {
+        Edge::update_rchl(this->edge_root, this->edge_lchl, this->edge_rchl);
+    } else {
+        throw std::runtime_error("Invalid type for Node::set_ptr()!");
     }
+}
+
+int Node::eval_relation(int branch_from, int branch_to) {
+    if (branch_to == branch_from * 2 + 1) {
+        return 1;
+    } else if (branch_to == branch_from * 2 + 2) {
+        return 2;
+    } else if (branch_to == (branch_from - 1) / 2) {
+        return 0;
+    } else {
+        return -1;
+    }
+}
+
+Tree::Tree(int n_level, NDimShape *shape) {
+    this->n_level = n_level;
+    // initialize edges
+    this->edge_num = (1 << n_level) - 1;
+    this->edges = new Edge*[this->edge_num];
+    for (int i = 0; i < this->edge_num; ++i)
+        this->edges[i] = new Edge(this->edge_size(Tree::get_depth(i)), shape);
+    // initialize nodes
+    this->node_num = (1 << (n_level - 1)) - 1;
+    this->nodes = new Node*[this->node_num];
+    for (int i = 0; i < this->node_num; ++i)
+        this->nodes[i] = new Node(i);
+    this->reset();
+}
+
+Tree::~Tree() {
+    for (int i = 0; i < this->edge_num; ++i)
+        delete this->edges[i];
+    delete[] this->edges;
+    for (int i = 0; i < this->node_num; ++i)
+        delete this->nodes[i];
+    delete[] this->nodes;
+}
+
+void Tree::reset() {
+    // reset the nodes
+    for (int i = 0; i < this->node_num; ++i) {
+        this->nodes[i]->set_ptr(0, this->edges[i]);
+        this->nodes[i]->set_ptr(1, this->edges[i * 2 + 1]);
+        this->nodes[i]->set_ptr(2, this->edges[i * 2 + 2]);
+    }
+    // reset the edges
+    this->edges[0]->set_node_from(nullptr);
+    for (int i = 1; i < this->node_num; ++i) {
+        this->edges[i]->reset();
+        this->edges[i]->set_node_from(this->nodes[i]);
+    }
+    for (int i = this->node_num; i < this->edge_num; ++i)
+        this->edges[i]->reset();
+}
+
+void Tree::set_root(const double *probs) {
+    this->edges[0]->set_probs(probs);
+}
+
+void Tree::print() {
+    for (int i = 0; i < this->edge_num; ++i) {
+        if (Tree::get_depth(i + 1) != Tree::get_depth(i)) {
+            this->edges[i]->print(false);
+            std::cout << std::endl;
+        } else
+            this->edges[i]->print();
+    }
+}
+
+Walker::Walker(int code_len, NDimShape *shape) {
+    this->code_lvl = std::ceil(std::log2(code_len));
+    this->code_len = (1 << this->code_lvl);
+    this->tree = new Tree(this->code_lvl + 1, shape);
+    this->edge_buffers = new Edge*[this->code_lvl + 1];
+    for (int i = 0; i < code_lvl + 1; ++i)
+        this->edge_buffers[i] = new Edge(this->tree->edge_size(i), shape);
+    this->node_buffer = new Node(-1);
+    this->reset();
+}
+
+Walker::~Walker() {
+    delete this->tree;
+    for (int i = 0; i < code_lvl + 1; ++i)
+        delete this->edge_buffers[i];
+    delete[] this->edge_buffers;
+    delete this->node_buffer;
+}
+
+void Walker::reset() {
+    this->tree->reset();
+    this->head = this->tree->get_node(0);
+}
+
+void Walker::set_priors(const double *priors) {
+    this->tree->set_root(priors);
+}
+
+void Walker::lazy_step(int branch_to) {
+    int branch_now = this->head->get_branch();
+    int type = Node::eval_relation(branch_now, branch_to);
+    // get the corresponding edges
+    int edge_branch = (type == 0) ? branch_now : branch_to;
+    Edge *edge_buffer = this->get_edge_buffer(edge_branch);
+    // update the data part of edge buffer (using node_buffer)
+    this->node_buffer->copy_ptrs(this->head);
+    this->node_buffer->set_ptr(type, edge_buffer);
+    this->node_buffer->update_edge(type);
+    // update the relation part of edge buffer
+    edge_buffer->set_node_from(this->head);
+    // update the relation part of node buffer
+    Node *node_prev = this->head->get_ptr(type)->get_node_from();
+    Edge *edge_real = this->tree->get_edge(edge_branch);
+    int type_rev = Node::eval_relation(branch_to, branch_now);
+    // update the node buffer
+    this->node_buffer->copy_ptrs(node_prev);
+    this->node_buffer->set_ptr(type_rev, edge_real);
+}
+
+void Walker::flush_to(int branch_to) {
+    int branch_now = this->head->get_branch();
+    int type = Node::eval_relation(branch_now, branch_to);
+    if (type == -1)
+        throw std::runtime_error("Invalid next branch for Walker::flush_to()!");
+    // copy the buffer data into real memory
+    int edge_branch = (type == 0) ? branch_now : branch_to;
+    Edge *edge_buffer = this->get_edge_buffer(edge_branch);
+    Edge *edge_real = this->tree->get_edge(edge_branch);
+    edge_real->copy_from(edge_buffer);
+    // and then step into the corresponding node
+    this->head = this->tree->get_node(branch_to);
+    this->head->copy_ptrs(this->node_buffer);
+}
+
+void Walker::print_tree() {
+    std::cout << "walker's current branch=" << this->head->get_branch() << ", with tree:\n";
+    this->tree->print();
 }
 
 // get the path between any two branches on the decoding tree
-void DecodingWalker::get_path(int branch_from, int branch_to, int *path, int path_len) {
-    for (int i = 0; i < path_len; ++i) {
-        path[i] = -1;
-    }
-    int up = 0, dn = 0;
-    // two branches are not necessarily on the same level
+int *Walker::get_path(int branch_from, int branch_to) {
+    // allocate memory for branches
+    int path_len = Tree::get_depth(branch_from) + Tree::get_depth(branch_to) + 1;
+    int *path = new int[path_len];
+    // the computation proceeds to their common root node
+    int up = 0, dn = path_len - 1;
     while (branch_from != branch_to) {
         while (branch_from > branch_to) {
             path[up] = branch_from;
@@ -390,28 +485,34 @@ void DecodingWalker::get_path(int branch_from, int branch_to, int *path, int pat
             up += 1;
         }
         while (branch_from < branch_to) {
-            path[path_len - 1 - dn] = branch_to;
+            path[dn] = branch_to;
             branch_to = (branch_to - 1) / 2;
-            dn += 1;
+            dn -= 1;
         }
     }
+    // save their common root
+    path[dn] = branch_to;
+    // and fill the remaining positions with -1 
+    for (int i = up; i < dn; ++i)
+        path[i] = -1;
+    return path;
 }
 
 // lead the walkers going through the path of the decoding tree
-void DecodingWalker::walk_to(DecodingWalker **walkers, int walker_num, int branch_to) {
-    int branch_from = walkers[0]->branch_now;
-    int path_len = walkers[0]->code_lvl * 2 + 1;
-    int *path = new int[path_len];
-    DecodingWalker::get_path(branch_from, branch_to, path, path_len);
-    for (int i = 0; i < path_len; ++i) {
-        int branch_next = path[i];
-        if (branch_next == -1) continue;
-        for (int j = 0; j < walker_num; ++j) {
-            walkers[j]->lazy_step(branch_next);
+void Walker::walk_to(Walker **walkers, int n_walker, int branch_to) {
+    int *path = Walker::get_path(walkers[0]->head->get_branch(), branch_to);
+    int branch_now = path[0], *branch_next = path + 1;
+    while (branch_now != branch_to) {
+        if (*branch_next != -1) {
+            if (branch_now != -1) {
+                for (int i = 0; i < n_walker; ++i)
+                    walkers[i]->lazy_step(*branch_next);
+                for (int i = 0; i < n_walker; ++i)
+                    walkers[i]->flush_to(*branch_next);
+            }
+            branch_now = *branch_next;
         }
-        for (int j = 0; j < walker_num; ++j) {
-            walkers[j]->flush_buffer();
-        }
+        branch_next += 1;
     }
     delete[] path;
 }

@@ -40,6 +40,7 @@
         "utility": "cpp",
         "fstream": "cpp",
         "initializer_list": "cpp",
+        "iomanip": "cpp",
         "iosfwd": "cpp",
         "iostream": "cpp",
         "istream": "cpp",

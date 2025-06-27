@@ -4,6 +4,7 @@ build/
 *.egg-info/
 *.so
 *.pyc
+**/.vscode/
 # Jupyter Book build output
 book/_build/
 book/_static/
