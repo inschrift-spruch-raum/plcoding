@@ -105,12 +105,25 @@ void JointProb::reset() {
 }
 
 void JointProb::calc_marginal(int var, double *output) {
-    for (int i = 0; i < this->shape->get_shape()[var]; ++i)
+    for (int i = 0; i < this->shape->get_base(var); ++i)
         output[i] = 0.0;
     for (int i = 0; i < this->shape->get_size(); ++i) {
         int j = this->shape->from_linear(i)[var];
         output[j] += this->data[i];
     }
+}
+
+double JointProb::calc_marginal(int var, int value) {
+    double result = 0.0;
+    for (int i = 0; i < this->shape->get_size(); ++i)
+        if (value == this->shape->from_linear(i)[var])
+            result += this->data[i];
+    return result;
+}
+
+void JointProb::get_value(int *output) {
+    for (int i = 0; i < this->shape->get_ndim(); ++i)
+        output[i] = this->values[i];
 }
 
 void JointProb::set_uniform() {
@@ -143,7 +156,7 @@ void JointProb::sum(JointProb *input1, JointProb *input2) {
         int value1 = input1->values[i];
         int value2 = input2->values[i];
         if (value1 != -1 && value2 != -1)
-            this->values[i] = (value1 + value2) % this->shape->get_shape()[i];
+            this->values[i] = (value1 + value2) % this->shape->get_base(i);
         else
             this->values[i] = -1;
     }
@@ -174,7 +187,7 @@ void JointProb::reverse(JointProb *input) {
     for (int i = 0; i < shape->get_size(); ++i) {
         const int *nd_index = shape->from_linear(i);
         for (int j = 0; j < shape->get_ndim(); ++j) {
-            int base = shape->get_shape()[j];
+            int base = shape->get_base(j);
             this->values[j] = (base - nd_index[j]) % base;
         }
         int k = shape->to_linear(this->values);
@@ -185,7 +198,7 @@ void JointProb::reverse(JointProb *input) {
         int value = input->values[i];
         this->values[i] = value;
         if (value != -1) {
-            int base = shape->get_shape()[i];
+            int base = shape->get_base(i);
             this->values[i] = (base - value) % base;
         }
     }
@@ -211,7 +224,6 @@ void JointProb::print(bool _not_last) {
 
 Edge::Edge(int size, NDimShape *shape) {
     this->size = size;
-    this->shape = shape;
     this->probs = new JointProb*[size];
     for (int i = 0; i < size; ++i)
         this->probs[i] = new JointProb(shape);
@@ -231,7 +243,7 @@ void Edge::reset() {
 }
 
 void Edge::set_probs(const double *probs) {
-    int stride = this->shape->get_size();
+    int stride = this->get_prob()->get_shape()->get_size();
     for (int i = 0; i < this->size; ++i)
         this->probs[i]->set_prior(probs + i * stride);
 }
@@ -266,7 +278,7 @@ void Edge::update_root(Edge *root, Edge *lchl, Edge *rchl) {
 
 void Edge::update_lchl(Edge *root, Edge *lchl, Edge *rchl) {
     int size = lchl->size;
-    JointProb temp = JointProb(lchl->shape);
+    JointProb temp = JointProb(lchl->get_prob()->get_shape());
     for (int i = 0; i < size; ++i) {
         temp.combine(rchl->probs[i], root->probs[i + size]);
         lchl->probs[i]->subtract(root->probs[i], &temp);
@@ -275,7 +287,7 @@ void Edge::update_lchl(Edge *root, Edge *lchl, Edge *rchl) {
 
 void Edge::update_rchl(Edge *root, Edge *lchl, Edge *rchl) {
     int size = lchl->size;
-    JointProb temp = JointProb(lchl->shape);
+    JointProb temp = JointProb(lchl->get_prob()->get_shape());
     for (int i = 0; i < size; ++i) {
         temp.subtract(root->probs[i], lchl->probs[i]);
         rchl->probs[i]->combine(&temp, root->probs[i + size]);
@@ -293,7 +305,8 @@ void Node::reset() {
     this->edge_rchl = nullptr;
 }
 
-void Node::copy_ptrs(const Node *input) {
+void Node::copy_from(const Node *input) {
+    this->branch = input->branch;
     this->edge_root = input->edge_root;
     this->edge_lchl = input->edge_lchl;
     this->edge_rchl = input->edge_rchl;
@@ -336,7 +349,9 @@ void Node::update_edge(int type) {
 }
 
 int Node::eval_relation(int branch_from, int branch_to) {
-    if (branch_to == branch_from * 2 + 1) {
+    if (branch_from == branch_to) {
+        return -1;
+    } else if (branch_to == branch_from * 2 + 1) {
         return 1;
     } else if (branch_to == branch_from * 2 + 2) {
         return 2;
@@ -437,7 +452,7 @@ void Walker::lazy_step(int branch_to) {
     int edge_branch = (type == 0) ? branch_now : branch_to;
     Edge *edge_buffer = this->get_edge_buffer(edge_branch);
     // update the data part of edge buffer (using node_buffer)
-    this->node_buffer->copy_ptrs(this->head);
+    this->node_buffer->copy_from(this->head);
     this->node_buffer->set_ptr(type, edge_buffer);
     this->node_buffer->update_edge(type);
     // update the relation part of edge buffer
@@ -447,28 +462,41 @@ void Walker::lazy_step(int branch_to) {
     Edge *edge_real = this->tree->get_edge(edge_branch);
     int type_rev = Node::eval_relation(branch_to, branch_now);
     // update the node buffer
-    this->node_buffer->copy_ptrs(node_prev);
+    this->node_buffer->copy_from(node_prev);
     this->node_buffer->set_ptr(type_rev, edge_real);
 }
 
-void Walker::flush_to(int branch_to) {
+void Walker::flush() {
     int branch_now = this->head->get_branch();
+    int branch_to  = this->node_buffer->get_branch();
     int type = Node::eval_relation(branch_now, branch_to);
-    if (type == -1)
-        throw std::runtime_error("Invalid next branch for Walker::flush_to()!");
     // copy the buffer data into real memory
     int edge_branch = (type == 0) ? branch_now : branch_to;
+    Edge *edge_real = this->get_edge_real(edge_branch);
     Edge *edge_buffer = this->get_edge_buffer(edge_branch);
-    Edge *edge_real = this->tree->get_edge(edge_branch);
     edge_real->copy_from(edge_buffer);
     // and then step into the corresponding node
-    this->head = this->tree->get_node(branch_to);
-    this->head->copy_ptrs(this->node_buffer);
+    Node *node_real = this->get_node_real(branch_to);
+    node_real->copy_from(this->node_buffer);
+    this->head = node_real;
 }
 
 void Walker::print_tree() {
     std::cout << "walker's current branch=" << this->head->get_branch() << ", with tree:\n";
     this->tree->print();
+}
+
+JointProb *Walker::calc_leaf(int index) {
+    int type = (index % 2 == 0) ? 1 : 2;
+    // calculate the joint distribution
+    Edge *edge_buffer = this->edge_buffers[this->code_lvl];
+    this->node_buffer->copy_from(this->head);
+    this->node_buffer->set_ptr(type, edge_buffer);
+    this->node_buffer->update_edge(type);
+    // and combine it with previous decision
+    Edge *edge_prev = this->head->get_ptr(type);
+    edge_buffer->combine_with(edge_prev);
+    return edge_buffer->get_prob();
 }
 
 // get the path between any two branches on the decoding tree
@@ -508,7 +536,7 @@ void Walker::walk_to(Walker **walkers, int n_walker, int branch_to) {
                 for (int i = 0; i < n_walker; ++i)
                     walkers[i]->lazy_step(*branch_next);
                 for (int i = 0; i < n_walker; ++i)
-                    walkers[i]->flush_to(*branch_next);
+                    walkers[i]->flush();
             }
             branch_now = *branch_next;
         }

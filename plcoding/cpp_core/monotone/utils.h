@@ -30,6 +30,7 @@ public:
     NDimShape(const int *shape, int ndim);
     ~NDimShape();
     const int *get_shape() { return this->shape; }
+    int get_base(int var) { return this->shape[var]; }
     int get_ndim() { return this->ndim; }
     int get_size() { return this->size; }
     const int *from_linear(int i) { return this->nd_indices[i]; }
@@ -49,7 +50,10 @@ public:
     JointProb(NDimShape *shape);
     ~JointProb();
     void reset();
+    NDimShape *get_shape() { return this->shape; }
     void calc_marginal(int var, double *output);
+    double calc_marginal(int var, int value);
+    void get_value(int *output);
     void set_uniform();
     void decision_upon(int var, int value);
     void set_prior(const double *prior);
@@ -66,7 +70,6 @@ class Edge {
 private:
     int size;
     JointProb **probs;
-    NDimShape *shape;
     Node *node_from;
 public:
     Edge(int size, NDimShape *shape);
@@ -99,7 +102,7 @@ public:
     Node(int branch);
     void reset();
     int get_branch() { return this->branch; }
-    void copy_ptrs(const Node *input);
+    void copy_from(const Node *input);
     Edge *get_ptr(int type);
     void set_ptr(int type, Edge *edge);
     void update_edge(int type);
@@ -143,13 +146,19 @@ public:
     ~Walker();
     void reset();
     void set_priors(const double *priors);
-    void lazy_step(int branch_to);
-    void flush_to(int branch_to);
     Edge *get_edge_real(int branch) { return this->tree->get_edge(branch); }
+    Node *get_node_real(int branch) { return this->tree->get_node(branch); }
     Edge *get_edge_buffer(int branch) { return this->edge_buffers[Tree::get_depth(branch)]; }
     Node *get_node_buffer() { return node_buffer; }
     void print_tree();
+    int branch_of_leaf(int index) { return (index + this->code_len - 1); }
+    int root_of_leaf(int index) { return (this->branch_of_leaf(index) - 1) / 2; }
+    JointProb *calc_leaf(int index);
 public:
-    static int *get_path(int branch_from, int branch_to);
     static void walk_to(Walker **walker, int n_walker, int branch_to);
+private:
+    void lazy_step(int branch_to);
+    void flush();
+private:
+    static int *get_path(int branch_from, int branch_to);
 };
