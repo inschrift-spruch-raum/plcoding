@@ -71,13 +71,13 @@ Plcoding库配套一册基于Jupyter Notebook的在线免费文档，其中给�
 
 上述是plcoding库的基本运行环境，如果想要顺利执行手册中的代码，则可能还需要安装matplotlib、tqdm、jupyter等常用Python库，这里不再赘述。
 
-**从源码**：下载源码到本地、并配好环境之后，进入CMakeLists.txt同级目录，执行pip的本地安装指令：
+**从源码**：（推荐）下载源码到本地、并配好环境之后，进入CMakeLists.txt同级目录，执行pip的本地安装指令：
 
 ```bash
 pip install .
 ```
 
-**从PyPI**：待基本功能开发完毕后将实现
+**从PyPI**：（尚未实现，working on ...）
 
 ```bash
 pip install plcoding
@@ -90,13 +90,13 @@ pip install plcoding
   - plcoding模块下的部分基本函数（2025.05.27）
   - 配套手册的基本内容已完成（2025.06.03）
   - plcoding.channel模块下的channel类和modulator类（2025.06.04）
+  - plcoding.channel模块下的coder类（2025.07.01）
+  - plcoding.source模块、以及从整数到比特流的映射函数（2025.07.15）
+  - plcoding.research.monotone模块，可用于研究单调链极化码（2025.08.24）
 
 - 待实现
   - 发布到PyPI
-  - plcoding.channel模块下的coder类
-  - plcoding.source模块
-  - plcoding.research模块
-  - 整数到比特流的映射函数
+  - 密度演化构造法
   - ...
 
 ### License
