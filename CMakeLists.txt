@@ -26,7 +26,7 @@ install(TARGETS classics DESTINATION plcoding/cpp_core)
 
 # monotone module
 pybind11_add_module(monotone
-    plcoding/cpp_core/monotone/decoders.cpp
+    plcoding/cpp_core/monotone/decoder.cpp
     plcoding/cpp_core/monotone/utils.cpp
 )
 target_link_libraries(monotone PRIVATE Python3::NumPy fftw3)

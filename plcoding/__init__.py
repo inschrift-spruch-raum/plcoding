@@ -67,16 +67,21 @@ def bec_channels(level: int, e: float = 0.5, _log: bool = False) -> NDArray[np.f
     return z_arr if _log else np.exp(z_arr)
 
 
-def basic_encode(input: NDArray[np.int64]) -> NDArray[np.int64]:
+def basic_encode(input: NDArray[np.int64], base: int=2, inverse: bool=False) -> NDArray[np.int64]:
     """
     The basic low-complexity recursive encoding of polar codes.
+
+    Args:
+        input (NDArray[int]): Symbol sequence before polar transform.
+        base (int): The alphabet size of the sequence.
+        inverse (bool): Enable non-binary inverse transfrom.
     """
     N, W_size = len(input), len(input)
     u, x = np.copy(input), np.empty_like(input)
     while W_size > 1:
         for j in range(0, N, 2):
-            x[j] = (u[j] + u[j + 1]) % 2
-            x[j + 1] = u[j + 1]
+            x[j] = ((u[j] - u[j + 1] + base) if inverse else (u[j] + u[j + 1])) % base
+            x[j + 1] = u[j + 1] % base
         for j in range(0, N, W_size):
             for k in range(0, W_size, 2):
                 u[j + int(k / 2)] = x[j + k]
