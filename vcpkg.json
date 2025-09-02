@@ -1,0 +1,11 @@
+{
+  "dependencies": [
+    {
+      "name": "fftw3",
+      "features": [
+        "avx2",
+        "threads"
+      ]
+    }
+  ]
+}

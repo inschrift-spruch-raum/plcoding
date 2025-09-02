@@ -11,3 +11,5 @@ book/_static/
 book/_toc.yml~
 **/.ipynb_checkpoints/
 essay/
+.venv
+.cache
