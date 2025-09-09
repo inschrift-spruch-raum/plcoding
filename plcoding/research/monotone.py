@@ -1,8 +1,8 @@
-from ast import Pass
 import numpy as np
 from numpy.typing import NDArray
 import plcoding
 from plcoding.cpp_core.monotone import ListIterator
+from tqdm import trange
 
 
 class JointProb():
@@ -171,12 +171,13 @@ class MNChain():
     def __len__(self) -> int:
         return len(self.sups)
     
-    def polarize(self, jProb: JointProb, _nsim: int=1000) -> NDArray[np.float64]:
+    def polarize(self, jProb: JointProb, _nsim: int=1000, _bar: bool=False) -> NDArray[np.float64]:
         """
         Monte-Carlo estimation on the polar entropies of the given joint probability distribution.
         Args:
             jProb (JointProb): The given joint probability distribution.
             _nsim (int): Simulation rounds.
+            _bar (bool): Control bit for showing a progress bar.
 
         Returns:
             NDArray[float]: The polarized entropies [bit] along the monotone chain.
@@ -184,7 +185,8 @@ class MNChain():
         pIter = MCIterator(block_len=self.N, jProb=jProb)
         pIter.set_priors(jProb.gen_iids(self.N))
         entropies = np.empty(shape=[_nsim, self.M, self.N], dtype=float)
-        for s in range(_nsim):
+        my_range = trange(_nsim) if _bar else range(_nsim)
+        for s in my_range:
             pIter.reset()
             for t in range(len(self)):
                 var, index = self.sups[t], self.subs[t]

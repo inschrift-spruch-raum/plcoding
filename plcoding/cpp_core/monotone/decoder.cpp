@@ -300,6 +300,12 @@ void ListIterator::set_values(int var, int index, input_int values, input_int fr
             dhead_to->lazy_fork(dhead_from, to_right, temp, this->memories[i]);
         }
     }
+    /*int n = this->code_len;
+    Edge **ptrs = new Edge*[n * nfork];
+    for (int i = 0; i < n; ++i)
+        for (int j = 0; j < nfork; ++j)
+            ptrs[i * nfork + j] = this->memories[from.data()[j]]->get_edge(i);
+    delete[] ptrs;*/
     for (int i = 0; i < nfork; ++i)
         this->dheads[i]->flush();
     this->active_num = nfork;

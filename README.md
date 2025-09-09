@@ -11,17 +11,17 @@
 
 Plcoding库配套一册基于Jupyter Notebook的在线免费文档，其中给出了大量的**可执行代码**，并配有详实的文字说明。撰写该手册的最初目的是用于助教工作。其现版本可以视作一本极化码入门手册。其中第一章《极化码简介》在没有对理论原理进行深入介绍的情况下，直接给出了明确的构造、编码和译码算法，适合那些不希望深入了解极化原理、只希望实现一份简单但完备的极化码解决方案的同学们。
 
-如果对你有帮助，请务必在github页面右上角，点击star支持本项目。**这次一定！**
+如果对你有帮助，请务必在Github [项目主页](https://github.com/RenZichang/plcoding) 的右上角，点击star支持本项目。**这次一定！**
 
-## 指南
+## 入门教程
 
 👉 [Plcoding用户手册](https://renzichang.github.io/plcoding/)
 
-本项目./plcoding/tests/目录、以及手册中，都给出了大量可执行代码，可用于了解plcoding库的基本用法。
-
 > 为实时获取手册的最新内容，可在阅读时使用组合按键 `Shift+F5` 强制刷新浏览器缓存。
 
-## 细节
+**除了入门手册外，在本项目的./plcoding/tests/目录下，也给出了测试用例，可用于快速了解plcoding库的基本用法。**
+
+## 细节说明
 
 这个库包括如下几个子模块：
 
@@ -58,7 +58,7 @@ Plcoding库配套一册基于Jupyter Notebook的在线免费文档，其中给�
   - 高性能计算的核心部分，部分其他模块是对该核心的Python封装
   - 这部分源码是可见的，如果确定理解它们的工作方式，可以绕过封装直接使用
 
-## 安装
+## 安装方法
 
 这个库使用pybind11来绑定C++模块到Python，并且使用了FFTW3来加速卷积运算，因此环境需求为：
 
@@ -69,15 +69,15 @@ Plcoding库配套一册基于Jupyter Notebook的在线免费文档，其中给�
   - pybind11
   - numpy
 
-上述是plcoding库的基本运行环境，如果想要顺利执行手册中的代码，则可能还需要安装matplotlib、tqdm、jupyter等常用Python库，这里不再赘述。
+上述是plcoding库的基本运行环境，如果想要顺利执行手册中的代码，则可能还需要安装matplotlib、tqdm、jupyter、torch等常用Python库，这里不再赘述。
 
-**从源码**：（推荐）下载源码到本地、并配好环境之后，进入CMakeLists.txt同级目录，执行pip的本地安装指令：
+**从源码**：下载源码到本地、配好上述运行环境之后，进入CMakeLists.txt同级目录，执行pip的本地安装指令：
 
 ```bash
 pip install .
 ```
 
-**从PyPI**：（尚未实现，working on ...）
+**从PyPI**：（推荐）
 
 ```bash
 pip install plcoding
@@ -93,10 +93,12 @@ pip install plcoding
   - plcoding.channel模块下的coder类（2025.07.01）
   - plcoding.source模块、以及从整数到比特流的映射函数（2025.07.15）
   - plcoding.research.monotone模块，可用于研究单调链极化码（2025.08.24）
+  - 发不到pypi，包名为plcoding（2025.09.07）
 
 - 待实现
-  - 发布到PyPI
-  - 密度演化构造法
+  - 各类构造法（启发式、密度演化等）
+  - 各类快速译码算法（对数似然比、最小和近似）
+  - 各类极化核矩阵的编译码
   - ...
 
 ### License
