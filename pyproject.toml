@@ -1,6 +1,6 @@
 [project]
 name = "plcoding"
-version = "0.1.0"
+version = "0.1.1"
 description = "An advanced research toolkit for Arikan's polar codes."
 authors = [
   { name = "Zichang Ren", email = "rzc1937986979@163.com" }
@@ -9,7 +9,10 @@ readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.12"
 dependencies = [
-  "scikit-build-core>=0.10", "pybind11", "numpy"
+  "scikit-build-core>=0.10",
+  "pybind11",
+  "numpy",
+  "tqdm"
 ]
 
 [tool.uv]
