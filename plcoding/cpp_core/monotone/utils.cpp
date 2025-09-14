@@ -1,5 +1,5 @@
 #include "utils.h"
-
+#include <iostream>
 
 ND_Shape::ND_Shape(const int *bases, int nvar) {
     this->nvar = nvar;

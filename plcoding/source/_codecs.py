@@ -3,7 +3,6 @@ import numpy as np
 from numpy.typing import NDArray
 from plcoding.cpp_core.classics import PolarIterator
 
-
 __all__ = ["encode_int16_cdf", "decode_int16_cdf", "encode_pmf", "decode_pmf"]
 
 
@@ -253,6 +252,5 @@ def _bytes_2_n_ints(data: bytes, base: int, n_ints: int) -> NDArray[np.int64]:
     num = int.from_bytes(data)
     values = np.empty(n_ints, dtype=np.int64)
     for i in range(n_ints - 1, -1, -1):
-        values[i] = num % base
-        num //= base
+        (num, values[i]) = divmod(num, base)
     return values

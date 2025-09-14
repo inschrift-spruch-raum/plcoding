@@ -1,6 +1,6 @@
 #include "utils.h"
-#include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
+#include <pybind11/pybind11.h>
 
 
 namespace py = pybind11;
@@ -27,12 +27,12 @@ public:
 
 class DecHead {
 private:
-    Edge    *target_e,  *buffer_e,  *memory_e;
-    Vertex  *target_v,  *buffer_v,  *memory_v;
+    Edge    *target_e{},  *buffer_e{},  *memory_e{};
+    Vertex  *target_v{},  *buffer_v{},  *memory_v{};
 public:
     Vertex *head;
-public:
-    DecHead(Vertex *vertex) { this->head = vertex; }
+
+    explicit DecHead(Vertex *vertex) : head(vertex) {  }
     void lazy_step(StepType type, StepType type_inv, DecMemory *mem);
     void lazy_fork(DecHead *dhead, StepType type, const double *decision, DecMemory *mem);
     void lazy_leaf(StepType type, DecMemory *mem);
@@ -49,13 +49,13 @@ private:
     DecMemory **memories;
     DecHead **dheads;
     int active_num;
-private:
+
     void walk_to(int branch_to);
 public:
     ListIterator(int code_len, int list_len, input_int bases);
     ~ListIterator();
     void reset();
-    void set_priors(input_double priors) { this->memories[0]->get_edge(0)->set_probs(priors.data()); }
+    void set_priors(const input_double& priors) { this->memories[0]->get_edge(0)->set_probs(priors.data()); }
     py::array_t<double> get_probs(int var, int index);
     py::array_t<double> get_roots();
     void set_values(int var, int index, input_int values, input_int from);

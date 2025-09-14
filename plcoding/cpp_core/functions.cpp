@@ -1,31 +1,10 @@
-#include <pybind11/pybind11.h>
-#include <pybind11/numpy.h>
+#include "./classics/utils.h"
 #include <fftw3.h>
-
+#include <pybind11/numpy.h>
+#include <pybind11/pybind11.h>
+#include <vector>
 
 namespace py = pybind11;
-
-
-// random seed-pair
-const unsigned int randa = 1103515245;
-const unsigned int randc = 12345;
-
-
-// generate a random permutation for Z_q
-inline void gen_randmap(int q, int* randmap) {
-    for (int i = 0; i < q; ++i)
-        randmap[i] = i;
-    unsigned int seed = q;
-    int temp;
-    for (int i = q - 1; i > 0; i--) {
-        seed = seed * randa + randc;
-        int j = seed % (i + 1);
-        temp = randmap[i];
-        randmap[i] =randmap[j];
-        randmap[j] = temp;
-    }
-}
-
 
 // fast probability distribution polarization
 py::tuple prob_polarize(py::array_t<double, py::array::c_style | py::array::forcecast> pmf, py::array_t<int, py::array::c_style | py::array::forcecast> sym) {

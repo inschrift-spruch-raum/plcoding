@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.15)
 project(plcoding_cpp_core LANGUAGES CXX)
 
 # set parameters
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(PYBIND11_FINDPYTHON ON)

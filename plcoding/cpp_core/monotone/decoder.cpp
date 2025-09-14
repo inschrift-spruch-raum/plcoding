@@ -60,7 +60,7 @@ void DecMemory::reset() {
 }
 
 void DecHead::lazy_step(StepType type, StepType type_inv, DecMemory *mem) {
-    if (type == to_parent) {
+    if (type == StepType::to_parent) {
         // obtain edges
         this->target_e = this->head->parent;
         this->buffer_e = new Edge(this->target_e);
@@ -70,7 +70,7 @@ void DecHead::lazy_step(StepType type, StepType type_inv, DecMemory *mem) {
         this->buffer_v = new Vertex(this->target_v);
         this->memory_v = mem->get_vertex(this->target_v);
         // pre-assign proper relationship
-        if (type_inv == to_left) {
+        if (type_inv == StepType::to_left) {
             this->buffer_v->left  = this->memory_e;
         } else {
             this->buffer_v->right = this->memory_e;
@@ -78,7 +78,7 @@ void DecHead::lazy_step(StepType type, StepType type_inv, DecMemory *mem) {
         this->buffer_e->from = this->head;
         // compute the corresponding probability
         this->head->calc_parent(this->buffer_e);
-    } else if (type == to_left) {
+    } else if (type == StepType::to_left) {
         // obtain edges
         this->target_e = this->head->left;
         this->buffer_e = new Edge(this->target_e);
@@ -91,7 +91,7 @@ void DecHead::lazy_step(StepType type, StepType type_inv, DecMemory *mem) {
         this->buffer_v->parent = this->memory_e;
         this->buffer_e->from = this->head;
         this->head->calc_left(this->buffer_e);
-    } else if (type == to_right) {
+    } else if (type == StepType::to_right) {
         // obtain edges
         this->target_e = this->head->right;
         this->buffer_e = new Edge(this->target_e);
@@ -110,7 +110,7 @@ void DecHead::lazy_step(StepType type, StepType type_inv, DecMemory *mem) {
 }
 
 void DecHead::lazy_fork(DecHead *dhead, StepType type, const double *decision, DecMemory *mem) {
-    if (type == to_left) {
+    if (type == StepType::to_left) {
         // obtain vertices
         this->target_v = dhead->head;
         this->buffer_v = new Vertex(this->target_v);
@@ -122,7 +122,7 @@ void DecHead::lazy_fork(DecHead *dhead, StepType type, const double *decision, D
         // pre-assign proper relationship and compute probabilities
         this->buffer_v->left = this->memory_e;
         this->buffer_e->shape->copy(decision, this->buffer_e->data[0]);
-    } else if (type == to_right) {
+    } else if (type == StepType::to_right) {
         // obtain vertices
         this->target_v = dhead->head;
         this->buffer_v = new Vertex(this->target_v);
@@ -138,7 +138,7 @@ void DecHead::lazy_fork(DecHead *dhead, StepType type, const double *decision, D
 }
 
 void DecHead::lazy_leaf(StepType type, DecMemory *mem) {
-    if (type == to_left) {
+    if (type == StepType::to_left) {
         // obtain vertices
         this->target_v = this->head;
         this->buffer_v = new Vertex(this->target_v);
@@ -151,7 +151,7 @@ void DecHead::lazy_leaf(StepType type, DecMemory *mem) {
         this->buffer_v->left = this->memory_e;
         this->target_v->calc_left(this->buffer_e);
         this->buffer_e->combine_with(this->target_e);
-    } else if (type == to_right) {
+    } else if (type == StepType::to_right) {
         // obtain vertices
         this->target_v = this->head;
         this->buffer_v = new Vertex(this->target_v);
@@ -255,14 +255,14 @@ py::array_t<double> ListIterator::get_probs(int var, int index) {
     double *results_ptr = results.mutable_data();
     if (index % 2 == 0) {
         for (int i = 0; i < this->active_num; ++i)
-            this->dheads[i]->lazy_leaf(to_left, this->memories[i]);
+            this->dheads[i]->lazy_leaf(StepType::to_left, this->memories[i]);
         for (int i = 0; i < this->active_num; ++i)
             this->dheads[i]->flush();
         for (int i = 0; i < this->active_num; ++i)
             this->shape->copy(this->dheads[i]->head->left->data[0], results_ptr + i * this->shape->get_size());
     } else {
         for (int i = 0; i < this->active_num; ++i)
-            this->dheads[i]->lazy_leaf(to_right, this->memories[i]);
+            this->dheads[i]->lazy_leaf(StepType::to_right, this->memories[i]);
         for (int i = 0; i < this->active_num; ++i)
             this->dheads[i]->flush();
         for (int i = 0; i < this->active_num; ++i)
@@ -293,11 +293,11 @@ void ListIterator::set_values(int var, int index, input_int values, input_int fr
         if (index % 2 == 0) {
             this->shape->copy(dhead_from->head->left->data[0], temp);
             this->shape->set_partial(var, values_ptr[i], temp);
-            dhead_to->lazy_fork(dhead_from, to_left, temp, this->memories[i]);
+            dhead_to->lazy_fork(dhead_from, StepType::to_left, temp, this->memories[i]);
         } else {
             this->shape->copy(dhead_from->head->right->data[0], temp);
             this->shape->set_partial(var, values_ptr[i], temp);
-            dhead_to->lazy_fork(dhead_from, to_right, temp, this->memories[i]);
+            dhead_to->lazy_fork(dhead_from, StepType::to_right, temp, this->memories[i]);
         }
     }
     for (int i = 0; i < nfork; ++i)
