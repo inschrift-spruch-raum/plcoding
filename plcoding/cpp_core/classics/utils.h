@@ -10,14 +10,14 @@ const uint32_t randa = 1103515245;
 const uint32_t randc = 12345;
 
 // get the inverse permutation
-inline void get_inverse(std::size_t q, const int* randmap, int* lookups) {
+inline void get_inverse(std::size_t q, std::span<const int> randmap, std::span<int> lookups) {
     for (std::size_t i = 0; i < q; ++i) {
-        lookups[randmap[i]] = i;
+        lookups[randmap[i]] = static_cast<int>(i);
     }
 }
 
 // normalize the given vector
-inline void normalize(std::size_t q, double* vector) {
+inline void normalize(std::size_t q, std::span<double> vector) {
     double tau = 0.0;
     for (std::size_t i = 0; i < q; ++i) {
         tau += vector[i];
@@ -28,18 +28,15 @@ inline void normalize(std::size_t q, double* vector) {
 }
 
 // generate a random permutation for Z_q
-inline void gen_randmap(std::size_t q, int* randmap) {
+inline void gen_randmap(std::size_t q, std::span<int> randmap) {
     for (std::size_t i = 0; i < q; ++i) {
-        randmap[i] = i;
+        randmap[i] = static_cast<int>(i);
     }
     uint32_t seed = q;
-    int temp = 0;
     for (std::size_t i = q - 1; i > 0; i--) {
         seed = seed * randa + randc;
         std::size_t j = seed % (i + 1);
-        temp = randmap[i];
-        randmap[i] =randmap[j];
-        randmap[j] = temp;
+        std::swap(randmap[i], randmap[j]);
     }
 }
 
@@ -51,6 +48,11 @@ private:
     fftw_plan a_plan, b_plan, c_plan;
 public:
     explicit FFTW3Wrapper(std::size_t seq_len);
+    FFTW3Wrapper(const FFTW3Wrapper&) = delete;
+    FFTW3Wrapper& operator=(const FFTW3Wrapper&) = delete;
+    FFTW3Wrapper(FFTW3Wrapper&&) = delete;
+    FFTW3Wrapper& operator=(FFTW3Wrapper&&) = delete;
     ~FFTW3Wrapper();
-    void circonv(const double* in1, const double* in2, std::span<double> out);
+    
+    void circonv(std::span<const double> in1, std::span<const double> in2, std::span<double> out);
 };

@@ -34,10 +34,10 @@ FFTW3Wrapper::~FFTW3Wrapper() {
 
 // fast circular convolution
 void FFTW3Wrapper::circonv(
-    const double* in1, const double* in2, std::span<double> out
+    std::span<const double> in1, std::span<const double> in2, std::span<double> out
 ) {
-    std::copy_n(in1, this->q, this->a_time.ptr());
-    std::copy_n(in2, this->q, this->b_time.ptr());
+    std::copy_n(in1.data(), this->q, this->a_time.ptr());
+    std::copy_n(in2.data(), this->q, this->b_time.ptr());
     fftw_execute(a_plan);
     fftw_execute(b_plan);
     auto a_f = a_freq.std_span();
