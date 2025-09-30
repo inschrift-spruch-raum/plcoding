@@ -11,8 +11,8 @@ private:
     std::size_t n, N, q;
     std::vector<double> edges;
     std::vector<bool> states;
-    std::vector<int> randmap;
-    std::vector<int> lookups;
+    std::vector<std::size_t> randmap;
+    std::vector<std::size_t> lookups;
     std::vector<double> tmp;
     FFTW3Wrapper fftw;
 public:
@@ -21,8 +21,8 @@ public:
     void reset();
     py::array_t<double> get_prob(std::size_t index);
     void set_value(std::size_t index, std::size_t value);
-    py::array_t<int> transform_2x(const py::array_t<int, static_cast<std::size_t>(py::array::c_style) | static_cast<std::size_t>(py::array::forcecast)>& input);
-    py::array_t<int> transform_2u(const py::array_t<int, static_cast<std::size_t>(py::array::c_style) | static_cast<std::size_t>(py::array::forcecast)>& input);
+    py::array_t<int64_t> transform_2x(const py::array_t<int64_t, static_cast<std::size_t>(py::array::c_style) | static_cast<std::size_t>(py::array::forcecast)>& input);
+    py::array_t<int64_t> transform_2u(const py::array_t<int64_t, static_cast<std::size_t>(py::array::c_style) | static_cast<std::size_t>(py::array::forcecast)>& input);
 private:
     std::span<double> get_edge(std::size_t level, std::size_t edge_index, bool desired_state);
 };
@@ -75,15 +75,15 @@ void PolarIterator::set_value(std::size_t index, std::size_t value) {
     this->states[this->N - 1 + index] = true;
 }
 
-py::array_t<int> PolarIterator::transform_2x(const py::array_t<int, static_cast<std::size_t>(py::array::c_style) | static_cast<std::size_t>(py::array::forcecast)>& input) {
+py::array_t<int64_t> PolarIterator::transform_2x(const py::array_t<int64_t, static_cast<std::size_t>(py::array::c_style) | static_cast<std::size_t>(py::array::forcecast)>& input) {
     py::buffer_info info = input.request();
     if (info.ndim != 1 || static_cast<std::size_t>(info.shape[0]) != this->N) {
         throw std::runtime_error("Invalid input size.");
     }
     // initialization
-    std::vector<int> xs(this->N);
-    std::vector<int> us(this->N);
-    std::copy_n(static_cast<int*>(info.ptr), this->N, us.data());
+    std::vector<std::size_t> xs(this->N);
+    std::vector<std::size_t> us(this->N);
+    std::copy_n(static_cast<int64_t*>(info.ptr), this->N, us.data());
     // recursive calculation
     std::size_t size = 2;
     while (size <= this->N) {
@@ -91,7 +91,7 @@ py::array_t<int> PolarIterator::transform_2x(const py::array_t<int, static_cast<
             for (std::size_t j = 0; j < size / 2; ++j) {
                 std::size_t index1 = i * size + j;
                 std::size_t index2 = index1 + size / 2;
-                xs[index1] = static_cast<int>((us[index1] + us[index2]) % this->q);
+                xs[index1] = static_cast<int64_t>((us[index1] + us[index2]) % this->q);
                 xs[index2] = this->randmap[us[index2]];
             }
         }
@@ -99,21 +99,21 @@ py::array_t<int> PolarIterator::transform_2x(const py::array_t<int, static_cast<
         size *= 2;
     }
     // ending process
-    auto output = py::array_t<int>(static_cast<Py_ssize_t>(this->N));
+    auto output = py::array_t<int64_t>(static_cast<Py_ssize_t>(this->N));
     py::buffer_info buf = output.request();
-    std::ranges::move(us, static_cast<int*>(buf.ptr));
+    std::ranges::move(us, static_cast<int64_t*>(buf.ptr));
     return output;
 }
 
-py::array_t<int> PolarIterator::transform_2u(const py::array_t<int, static_cast<std::size_t>(py::array::c_style) | static_cast<std::size_t>(py::array::forcecast)>& input) {
+py::array_t<int64_t> PolarIterator::transform_2u(const py::array_t<int64_t, static_cast<std::size_t>(py::array::c_style) | static_cast<std::size_t>(py::array::forcecast)>& input) {
     py::buffer_info info = input.request();
-    int* data_ptr = static_cast<int*>(info.ptr);
+    auto* data_ptr = static_cast<int64_t*>(info.ptr);
     if (info.ndim != 1 || static_cast<std::size_t>(info.shape[0]) != this->N) {
         throw std::runtime_error("Invalid input size.");
     }
     // initialization
-    std::vector<int> xs(this->N);
-    std::vector<int> us(this->N);
+    std::vector<std::size_t> xs(this->N);
+    std::vector<std::size_t> us(this->N);
     std::copy_n(data_ptr, this->N, xs.data());
     // recursive calculation
     std::size_t size = this->N;
@@ -123,16 +123,16 @@ py::array_t<int> PolarIterator::transform_2u(const py::array_t<int, static_cast<
                 std::size_t index1 = i * size + j;
                 std::size_t index2 = index1 + size / 2;
                 us[index2] = this->lookups[xs[index2]];
-                us[index1] = static_cast<int>((xs[index1] - us[index2] + this->q) % this->q);
+                us[index1] = static_cast<int64_t>((xs[index1] - us[index2] + this->q) % this->q);
             }
         }
         std::swap(xs, us);
         size /= 2;
     }
     // ending process
-    auto output = py::array_t<int>(static_cast<Py_ssize_t>(this->N));
+    auto output = py::array_t<int64_t>(static_cast<Py_ssize_t>(this->N));
     py::buffer_info buf = output.request();
-    std::ranges::move(xs, static_cast<int*>(buf.ptr));
+    std::ranges::move(xs, static_cast<int64_t*>(buf.ptr));
     return output;
 }
 
@@ -226,7 +226,7 @@ std::span<double> PolarIterator::get_edge(std::size_t level, std::size_t edge_in
 
 PYBIND11_MODULE(classics, m) {
     py::class_<PolarIterator>(m, "PolarIterator")
-        .def(py::init<int, int>(), py::arg("code_len"), py::arg("prob_base"))
+        .def(py::init<int64_t, int64_t>(), py::arg("code_len"), py::arg("prob_base"))
         .def("set_priors", &PolarIterator::set_priors)
         .def("reset", &PolarIterator::reset)
         .def("get_prob", &PolarIterator::get_prob)

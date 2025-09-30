@@ -104,10 +104,13 @@ def decode_pmf(pmf: NDArray[np.float64], data: bytes) -> NDArray[np.int64]:
     pad_pmf[:, 0] = 1.0
     pmf_ = np.concatenate([pmf, pad_pmf], axis=0)
     # decompress (note: returns sym_ with permutation)
-    sym_ = _polar_decompress(pmf_, data)  # shape: (block_len,)
-    # inverse permutation
     rng = np.random.default_rng(seed=block_len)
-    permute_inv = np.argsort(rng.permutation(block_len))
+    permute = rng.permutation(block_len)
+    pmf_permuted = pmf_[permute]
+    sym_ = _polar_decompress(pmf_permuted, data)  # shape: (block_len,)
+    
+    # inverse permutation
+    permute_inv = np.argsort(permute)
     sym = sym_[permute_inv]
     # remove padding and return
     return sym[:N]
@@ -140,20 +143,20 @@ def _polar_compress(pmf: NDArray[np.float64], sym: NDArray[np.int64]) -> bytes:
     hold1 = np.max(pmf_pl, axis=1) <= thresh
     hold2 = ~hold1 & (sym_ml != sym_pl)
     # data segment-1: the true values of symbols with high uncertainty, ranging from (0) to (q-1)
-    data1 = _ints_2_bytes(sym_pl[hold1], q)
+    part1 = _ints_2_bytes(sym_pl[hold1], q)
     head_len = int(np.ceil(np.log2(N) / 8))
-    data1 = int(hold1.sum()).to_bytes(head_len) + data1
+    data1 = int(hold1.sum()).to_bytes(head_len) + part1
     # data segment-2: indices and differences of the remaining error bits
     indices = np.flatnonzero(hold2)                                 # indices, ranging from (0) to (N-1)
     differences = np.mod(sym_pl[indices] - sym_ml[indices], q)      # differences, ranging from (1) to (q-1)
     merged = indices + (differences - 1) * N                        # merge the index and the difference together
     merged_base = N * (q - 1)
-    data2 = _ints_2_bytes(merged, merged_base)
-    # a header needs to be attached only when the bit width of the merged symbol is less than one byte
-    if merged_base < 256:
-        data2 = int(hold2.sum()).to_bytes(head_len) + data2
+    part2 = _ints_2_bytes(merged, merged_base)
+    
+    part2_len = hold2.sum()
+    data2 = int(part2_len).to_bytes(head_len) + part2
+    
     return data1 + data2
-
 
 def _polar_decompress(pmf: NDArray[np.float64], data: bytes) -> NDArray[np.int64]:
     """
@@ -168,23 +171,42 @@ def _polar_decompress(pmf: NDArray[np.float64], data: bytes) -> NDArray[np.int64
     """
     N, q = pmf.shape
     head_len = int(np.ceil(np.log2(N) / 8))
+    
     # parse data segment-1
     part1_len = int.from_bytes(data[:head_len])
     data1_len = int(np.ceil(part1_len * np.log2(q) / 8))
     data1 = data[head_len : head_len + data1_len]
     part1 = _bytes_2_n_ints(data1, q, part1_len)
+    
     # parse data segment-2
+    current_pos = head_len + data1_len
     merged_base = N * (q - 1)
-    if merged_base < 256:
-        part2_len = int.from_bytes(data[head_len + data1_len : head_len + data1_len + head_len])
-        data2 = data[head_len + data1_len + head_len:]
+    
+    if current_pos + head_len <= len(data):
+        part2_len = int.from_bytes(data[current_pos:current_pos + head_len])
+        current_pos += head_len
     else:
-        data2 = data[head_len + data1_len :]
-        part2_len = int(np.floor(len(data2) * 8 / np.log2(merged_base)))
-    # parse indices and differences from data segment-2
-    merged = _bytes_2_n_ints(data2, merged_base, part2_len)
-    indices = np.mod(merged, N)
-    differences = (merged - indices) // N + 1
+        part2_len = 0
+    
+    # 修复：正确计算data2的长度
+    if part2_len > 0:
+        data2_len = int(np.ceil(part2_len * np.log2(merged_base) / 8))
+        # 修复：确保不超出数据范围
+        data2_end = min(current_pos + data2_len, len(data))
+        data2 = data[current_pos:data2_end]
+    else:
+        data2 = b''
+        merged = np.array([], dtype=np.int64)
+    
+    # 解析索引和差异
+    if part2_len > 0 and len(data2) > 0:
+        merged = _bytes_2_n_ints(data2, merged_base, part2_len)
+        indices = np.mod(merged, N)
+        differences = (merged - indices) // N + 1
+    else:
+        indices = np.array([], dtype=np.int64)
+        differences = np.array([], dtype=np.int64)
+    
     # successive cancellation decoding
     pIter = PolarIterator(N, q)
     pIter.set_priors(pmf)
@@ -192,19 +214,24 @@ def _polar_decompress(pmf: NDArray[np.float64], data: bytes) -> NDArray[np.int64
     sym_pl = np.empty((N,), dtype=int)
     tau, psi = 0, 0
     thresh = 1 - np.log(q) / (np.log(N) + np.log(q - 1))
+    
     for i in range(N):
         prob = pIter.get_prob(i)
         if np.max(prob) <= thresh:
-            sym_pl[i] = part1[tau]
-            tau += 1
+            if tau < len(part1):
+                sym_pl[i] = part1[tau]
+                tau += 1
+            else:
+                # 修复：处理边界情况
+                sym_pl[i] = np.argmax(prob)
         else:
             sym_pl[i] = np.argmax(prob)
             if (psi < indices.size) and (i == indices[psi]):
                 sym_pl[i] = (sym_pl[i] + differences[psi]) % q
                 psi += 1
         pIter.set_value(i, sym_pl[i])
+    
     return pIter.transform_2x(sym_pl)
-
 
 def _ints_2_bytes(values: NDArray[np.int64], base: int) -> bytes:
     """

@@ -17,13 +17,13 @@ FFTW3Wrapper::FFTW3Wrapper(std::size_t seq_len):
     c_freq(seq_len / 2 + 1),
     // fftw3 plans
     a_plan(fftw_plan_dft_r2c_1d(
-        static_cast<int>(seq_len), a_time.ptr(), a_freq.ptr(), FFTW_MEASURE
+        static_cast<std::int32_t>(seq_len), a_time.ptr(), a_freq.ptr(), FFTW_MEASURE
     )),
     b_plan(fftw_plan_dft_r2c_1d(
-        static_cast<int>(seq_len), b_time.ptr(), b_freq.ptr(), FFTW_MEASURE
+        static_cast<std::int32_t>(seq_len), b_time.ptr(), b_freq.ptr(), FFTW_MEASURE
     )),
     c_plan(fftw_plan_dft_c2r_1d(
-        static_cast<int>(seq_len), c_freq.ptr(), c_time.ptr(), FFTW_MEASURE
+        static_cast<std::int32_t>(seq_len), c_freq.ptr(), c_time.ptr(), FFTW_MEASURE
     )) {}
 
 FFTW3Wrapper::~FFTW3Wrapper() {

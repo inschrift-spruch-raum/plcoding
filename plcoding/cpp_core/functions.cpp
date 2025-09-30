@@ -15,7 +15,7 @@ py::tuple prob_polarize(py::array_t<double, py::array::c_style | py::array::forc
     double* seqs  = new double[L * q];
     double* seq_  = new double[L * q];
     int* bols = new int[L];
-    int* randmap = new int[q];
+    std::size_t* randmap = new std::size_t[q];
     gen_randmap(q, std::span(randmap, q));
     // initialization of fftw3
     int N = L / 2;
