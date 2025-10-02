@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <fftw3.h>
+#include <vector>
 
 enum class StepType: uint8_t {to_parent, to_left, to_right, invalid};
 class ND_Shape;
@@ -18,7 +19,7 @@ inline StepType get_type(int from, int to) {
 class ND_Shape {
 private:    
     int nvar;
-    int *bases;
+    std::vector<int> bases;
     int size;
     int **nd_indices;
     int *reverse_map;

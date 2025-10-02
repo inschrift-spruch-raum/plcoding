@@ -1,8 +1,13 @@
-#include "utils.h"
 #include <cstddef>
 #include <span>
 #include <utility>
 #include <vector>
+
+#include <pybind11/numpy.h>
+#include <pybind11/pybind11.h>
+
+#include "../fftw_wrap/fftw_wrap.h"
+#include "utils.h"
 
 namespace py = pybind11;
 
@@ -14,7 +19,7 @@ private:
     std::vector<std::size_t> randmap;
     std::vector<std::size_t> lookups;
     std::vector<double> tmp;
-    FFTW3Wrapper fftw;
+    fftw::wrapper fftw;
 public:
     PolarIterator(std::size_t code_len, std::size_t prob_base);
     void set_priors(const py::array_t<double, static_cast<std::size_t>(py::array::c_style) | static_cast<std::size_t>(py::array::forcecast)>& input);

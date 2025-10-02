@@ -24,7 +24,6 @@ install(FILES $<TARGET_RUNTIME_DLLS:functions>
 # classics module
 pybind11_add_module(classics
     plcoding/cpp_core/classics/decoder.cpp
-    plcoding/cpp_core/classics/utils.cpp
 )
 target_link_libraries(classics PRIVATE Python::NumPy FFTW3::fftw3)
 install(TARGETS classics DESTINATION plcoding/cpp_core)

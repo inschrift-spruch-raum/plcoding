@@ -1,9 +1,5 @@
 #pragma once
-#include "../fftw_wrap/fftw_wrap.h"
-#include <cstddef>
-#include <fftw3.h>
-#include <pybind11/numpy.h>
-#include <pybind11/pybind11.h>
+
 #include <span>
 
 const uint32_t randa = 1103515245;
@@ -39,20 +35,3 @@ inline void gen_randmap(std::size_t q, std::span<std::size_t> randmap) {
         std::swap(randmap[i], randmap[j]);
     }
 }
-
-class FFTW3Wrapper {
-private:
-    std::size_t q;
-    fftw::real_array a_time, b_time, c_time;
-    fftw::complex_array a_freq, b_freq, c_freq;
-    fftw_plan a_plan, b_plan, c_plan;
-public:
-    explicit FFTW3Wrapper(std::size_t seq_len);
-    FFTW3Wrapper(const FFTW3Wrapper&) = delete;
-    FFTW3Wrapper& operator=(const FFTW3Wrapper&) = delete;
-    FFTW3Wrapper(FFTW3Wrapper&&) = delete;
-    FFTW3Wrapper& operator=(FFTW3Wrapper&&) = delete;
-    ~FFTW3Wrapper();
-    
-    void circonv(std::span<const double> in1, std::span<const double> in2, std::span<double> out);
-};

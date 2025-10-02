@@ -1,10 +1,8 @@
 #include "utils.h"
 #include <iostream>
+#include <vector>
 
-ND_Shape::ND_Shape(const int *bases, int nvar) {
-    this->nvar = nvar;
-    this->bases = new int[nvar];
-    this->size = 1;
+ND_Shape::ND_Shape(const int *bases, int nvar) : nvar(nvar), bases(nvar), size(1) {
     for (int i = 0; i < nvar; ++i) {
         this->bases[i] = bases[i];
         this->size *= bases[i];
@@ -19,13 +17,13 @@ ND_Shape::ND_Shape(const int *bases, int nvar) {
         }
     }
     this->reverse_map = new int[this->size];
-    int *nd_index = new int[nvar];
+    std::vector<int> nd_index(nvar);
     for (int i = 0; i < this->size; ++i) {
-        for (int j = 0; j < nvar; ++j)
+        for (int j = 0; j < nvar; ++j) {
             nd_index[j] = (bases[j] - this->nd_indices[i][j]) % bases[j];
-        this->reverse_map[i] = this->to_linear(nd_index);
+        }
+        this->reverse_map[i] = this->to_linear(nd_index.data());
     }
-    delete[] nd_index;
     // fast operation
     this->array1 = fftw_alloc_real(this->size);
     this->array2 = fftw_alloc_real(this->size);
@@ -39,9 +37,9 @@ ND_Shape::ND_Shape(const int *bases, int nvar) {
 }
 
 ND_Shape::~ND_Shape() {
-    delete[] this->bases;
-    for (int i = 0; i < this->size; ++i)
+    for (int i = 0; i < this->size; ++i) {
         delete[] this->nd_indices[i];
+    }
     delete[] this->nd_indices;
     fftw_destroy_plan(this->plan1);
     fftw_destroy_plan(this->plan2);
@@ -56,23 +54,27 @@ ND_Shape::~ND_Shape() {
 
 void ND_Shape::set_partial(int var, int value, double *data) const {
     double tau = 0.0;
-    for (int i = 0; i < this->size; ++i)
+    for (int i = 0; i < this->size; ++i) {
         if (this->nd_indices[i][var] == value && data[i] != 0) {
             data[i] = 1.0;
             tau += 1.0;
         } else {
             data[i] = 0.0;
         }
-    if (tau == 0)
-        std::cout << "found tau=0 in set_partial()" << std::endl;
-    for (int i = 0; i < this->size; ++i)
+    }
+    if (tau == 0) {
+        std::cout << "found tau=0 in set_partial()" << '\n';
+    }
+    for (int i = 0; i < this->size; ++i) {
         data[i] /= tau;
+    }
 }
 
 int ND_Shape::to_linear(const int *index) const {
     int k = 0;
-    for (int i = 0; i < this->nvar; ++i)
+    for (int i = 0; i < this->nvar; ++i) {
         k = k * this->bases[i] + index[i];
+    }
     return k;
 }
 
@@ -82,10 +84,12 @@ void ND_Shape::nrmcomb(const double *from1, const double *from2, double *to) con
         to[i] = from1[i] * from2[i];
         tau += to[i];
     }
-    if (tau == 0)
-        std::cout << "found tau=0 in nrmcomb()" << std::endl;
-    for (int i = 0; i < this->size; ++i)
+    if (tau == 0) {
+        std::cout << "found tau=0 in nrmcomb()" << '\n';
+    }
+    for (int i = 0; i < this->size; ++i) {
         to[i] /= tau;
+    }
 }
 
 void ND_Shape::circonv(const double *from1, const double *from2, double *to) const {
@@ -97,8 +101,10 @@ void ND_Shape::circonv(const double *from1, const double *from2, double *to) con
     fftw_execute(this->plan2);
     // multiplication of complex numbers
     for (int i = 0; i < this->size; ++i) {
-        double a = this->farray1[i][0], b = this->farray1[i][1];
-        double c = this->farray2[i][0], d = this->farray2[i][1];
+        double a = this->farray1[i][0];
+        double b = this->farray1[i][1];
+        double c = this->farray2[i][0];
+        double d = this->farray2[i][1];
         this->farray_[i][0] = a * c - b * d;
         this->farray_[i][1] = a * d + b * c;
     }
@@ -109,24 +115,14 @@ void ND_Shape::circonv(const double *from1, const double *from2, double *to) con
     }
 }
 
-Edge::Edge(int branch, int size, const ND_Shape *shape) {
-    this->branch = branch;
-    this->size = size;
-    this->shape = shape;
-    this->from = nullptr;
-    this->data = new double*[size];
+Edge::Edge(int branch, int size, const ND_Shape *shape) : branch(branch), size(size), shape(shape), from(nullptr), data(new double*[size]) {
     for (int i = 0; i < this->size; ++i) {
         this->data[i] = new double[shape->get_size()];
         shape->set_uniform(this->data[i]);
     }
 }
 
-Edge::Edge(const Edge *edge) {
-    this->branch = edge->branch;
-    this->size = edge->size;
-    this->shape = edge->shape;
-    this->from = edge->from;
-    this->data = new double*[this->size];
+Edge::Edge(const Edge *edge) : branch(edge->branch), size(edge->size), shape(edge->shape), from(edge->from), data(new double*[this->size]) {
     for (int i = 0; i < this->size; ++i) {
         this->data[i] = new double[this->shape->get_size()];
         this->shape->copy(edge->data[i], this->data[i]);
@@ -134,14 +130,16 @@ Edge::Edge(const Edge *edge) {
 }
 
 Edge::~Edge() {
-    for (int i = 0; i < this->size; ++i)
+    for (int i = 0; i < this->size; ++i) {
         delete[] this->data[i];
-    delete this->data;
+    }
+    delete[] this->data;
 }
 
 void Edge::clear_data() {
-    for (int i = 0; i < this->size; ++i)
+    for (int i = 0; i < this->size; ++i) {
         this->shape->set_uniform(this->data[i]);
+    }
 }
 
 void Edge::copy_from(const Edge *edge) {
@@ -149,27 +147,26 @@ void Edge::copy_from(const Edge *edge) {
     this->size = edge->size;
     this->shape = edge->shape;
     this->from = edge->from;
-    for (int i = 0; i < this->size; ++i)
+    for (int i = 0; i < this->size; ++i) {
         this->shape->copy(edge->data[i], this->data[i]);
+    }
 }
 
 void Edge::set_probs(const double *probs) {
-    for (int i = 0; i < this->size; ++i)
-        for (int j = 0; j < this->shape->get_size(); ++j)
+    for (int i = 0; i < this->size; ++i) {
+        for (int j = 0; j < this->shape->get_size(); ++j) {
             this->data[i][j] = probs[i * this->shape->get_size() + j];
+        }
+    }
 }
 
 void Edge::combine_with(const Edge *edge) {
-    for (int i = 0; i < this->size; ++i)
+    for (int i = 0; i < this->size; ++i) {
         this->shape->nrmcomb(this->data[i], edge->data[i], this->data[i]);
+    }
 }
 
-Vertex::Vertex(int branch) {
-    this->branch = branch;
-    this->parent = nullptr;
-    this->left = nullptr;
-    this->right = nullptr;
-}
+Vertex::Vertex(int branch) : branch(branch), parent(nullptr), left(nullptr), right(nullptr) {}
 
 Vertex::Vertex(const Vertex *vertex) {
     this->copy_from(vertex);
@@ -194,7 +191,7 @@ void Vertex::calc_parent(Edge *result) {
 void Vertex::calc_left(Edge *result) {
     const ND_Shape *shape = this->left->shape;
     int child_size = this->left->size;
-    double *temp = new double[shape->get_size()];
+    auto *temp = new double[shape->get_size()];
     for (int i = 0; i < child_size; ++i) {
         shape->nrmcomb(this->parent->data[i + child_size], this->right->data[i], result->data[i]);
         shape->reverse(result->data[i], temp);
@@ -205,7 +202,7 @@ void Vertex::calc_left(Edge *result) {
 void Vertex::calc_right(Edge *result) {
     const ND_Shape *shape = this->left->shape;
     int child_size = this->left->size;
-    double *temp = new double[shape->get_size()];
+    auto *temp = new double[shape->get_size()];
     for (int i = 0; i < child_size; ++i) {
         shape->reverse(this->left->data[i], result->data[i]);
         shape->circonv(this->parent->data[i], result->data[i], temp);
