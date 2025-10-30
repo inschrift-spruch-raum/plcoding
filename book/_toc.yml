@@ -1,0 +1,31 @@
+format: jb-book
+root: main
+
+chapters:
+  - file: 01_Introduction/00_index.ipynb
+    title: 第一章：极化码简介
+    sections:
+      - file: 01_Introduction/01_what
+        title: 一、什么是极化码？
+      - file: 01_Introduction/02_construct
+        title: 二、如何构造极化码？
+      - file: 01_Introduction/03_encode
+        title: 三、如何编码？
+      - file: 01_Introduction/04_decode
+        title: 四、如何译码？
+  - file: 02_Basics/00_index.ipynb
+    title: 第二章：极化码基础
+    sections:
+      - file: 02_Basics/01_standard_sc
+        title: 一、标准SC译码
+      - file: 02_Basics/02_polarization
+        title: 二、极化现象
+      - file: 02_Basics/03_polar_codes
+        title: 三、极化码
+      - file: 02_Basics/04_construction
+        title: 四、构造算法
+  - file: 03_Advanced/00_index.ipynb
+    title: 第三章：极化码进阶
+    sections:
+      - file: 03_Advanced/01_compression
+        title: 一、极化数据压缩
