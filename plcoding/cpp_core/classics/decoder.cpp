@@ -67,7 +67,7 @@ py::array_t<double> PolarIterator::get_prob(std::size_t index) {
 }
 
 void PolarIterator::set_value(std::size_t index, std::size_t value) {
-    if (value < 0 || value >= this->q) {
+    if (value >= this->q) {
         throw std::runtime_error("The value should be in Z_q!");
     }
     // you cannot just change an edge without updating the Bayesian network
